@@ -51,7 +51,8 @@ export class Lens {
       const x1 = two ? (i === 0 ? S : S / 2) : S;
       const pts: Pt[] = [];
       if (phase === 'solid') {
-        const step = 92;
+        // ice is the less dense phase of water, so its lattice is drawn a little more open
+        const step = info.mat === 'water' ? 104 : 92;
         for (let y = step / 2; y < S; y += step)
           for (let x = x0 + step / 2; x < x1; x += step) pts.push({ x, y, vx: 0, vy: 0, hx: x, hy: y });
       } else if (phase === 'liquid') {

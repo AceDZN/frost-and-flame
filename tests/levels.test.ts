@@ -418,3 +418,97 @@ describe('regressions', () => {
     expect(b.g.body('balloon').T).toBeLessThan(101); // not heated on toward 200 °C
   });
 });
+
+describe('science review regressions', () => {
+  // Run and jump at the unfrozen creek from every take-off point; nobody may land on the far bank.
+  const sweep = (level: string, setup: (b: Bot) => void, start: number, edge: number, farBank: number) => {
+    const landed: number[] = [];
+    for (let off = -0.45; off <= 0.8; off += 0.025) {
+      const b = new Bot(level);
+      setup(b);
+      b.g.player.pos = { x: 0, y: 0, z: start };
+      b.g.player.vel = { x: 0, y: 0, z: 0 };
+      b.step({}, 5);
+      let jumped = false;
+      for (let i = 0; i < 240; i++) {
+        const z = b.g.player.pos.z;
+        const jump = !jumped && z <= edge + off;
+        if (jump) jumped = true;
+        b.step({ mz: -1, jump: jump || (jumped && i % 2 === 0 && b.g.player.vel.y > 0) });
+        if (b.g.splashes > 0) break;
+      }
+      if (b.g.splashes === 0 && b.g.player.pos.z < farBank) landed.push(+off.toFixed(3));
+    }
+    return landed;
+  };
+
+  it('level 1: the creek cannot be jumped (it must be frozen)', () => {
+    const landed = sweep('thaw', (b) => b.g.body('door').addHeat(1e7), 0.5, -2.2, -7.2);
+    expect(landed).toEqual([]);
+  });
+
+  it('level 6: the creek cannot be jumped either', () => {
+    const landed = sweep('observatory', () => {}, 1.8, -0.5, -5.5);
+    expect(landed).toEqual([]);
+  });
+
+  it('level 6: the dome is sealed while its latch is frozen (no way around the glass)', () => {
+    const b = new Bot('observatory');
+    for (const x of [-5.6, -5.0, 5.0, 5.6]) {
+      b.g.player.pos = { x, y: 4.5, z: -13.2 };
+      b.g.player.vel = { x: 0, y: 0, z: 0 };
+      b.step({}, 3);
+      b.goto(x, -17, { maxT: 3 });
+      expect(b.g.player.pos.z).toBeGreaterThan(-15.1);
+    }
+  });
+
+  it('boiling never announces condensation', () => {
+    for (const id of ['steam', 'observatory'] as const) {
+      const b = new Bot(id);
+      if (id === 'steam') {
+        b.goto(0.8, -2.8);
+        b.face(-2.2, -2.6);
+      } else {
+        b.g.player.pos = { x: 0.8, y: 0.35, z: -11.2 };
+        b.step({}, 3);
+        b.face(-2.4, -8.6);
+      }
+      const seen: string[] = [];
+      for (let i = 0; i < 60 * 8; i++) {
+        b.step({ heat: true });
+        for (const e of b.g.events.splice(0)) if (e.type === 'phase' && (e.to === 'liquid' && e.from === 'gas')) seen.push(e.id);
+      }
+      expect(seen).toEqual([]);
+    }
+  });
+
+  it('the water system total stays the same while it boils and condenses (what the lens shows)', () => {
+    const b = new Bot('steam');
+    const totals = new Set<number>();
+    b.goto(0.8, -2.8);
+    b.face(-2.2, -2.6);
+    b.hold('heat', (g) => {
+      totals.add(Math.round(g.systemMass('basin') * 1000) / 1000);
+      return g.balloonTop(g.entity<'balloon'>('balloon')) >= 4.49;
+    }, 15);
+    expect([...totals]).toEqual([150]);
+  });
+
+  it('rods conduct with the one shared conduction scale', async () => {
+    const { conductance } = await import('../src/sim/thermal');
+    const b = new Bot('paths');
+    const rod = b.g.entity<'rod'>('copperRod');
+    const area = Math.PI * rod.radius ** 2;
+    const len = Math.hypot(rod.to.x - rod.from.x, rod.to.y - rod.from.y, rod.to.z - rod.from.z) / rod.segments;
+    const link = b.g.sys.links.find((l) => l.a === 'copperRod#0')!;
+    expect(link.G).toBeCloseTo(conductance(400, area, len), 9);
+  });
+
+  it('the glove cannot reach the creek through the ice door (line of sight)', () => {
+    const b = new Bot('thaw');
+    b.goto(0, 2.6);
+    b.face(0, -4);
+    expect(b.g.candidates().map((c) => c.id)).not.toContain('creek');
+  });
+});

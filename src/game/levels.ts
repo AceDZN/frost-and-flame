@@ -46,7 +46,7 @@ const level1: LevelDef = {
   index: 1,
   nameHe: 'הפשרה',
   objectiveHe: 'הגיעו למגדלור',
-  conceptHe: 'התכה וקיפאון',
+  conceptHe: 'התכה והקפאה',
   spawn: { x: 0, y: 0, z: 6.5 },
   airT: -6,
   battery: { start: 400_000, capacity: 900_000 },
@@ -60,10 +60,10 @@ const level1: LevelDef = {
     { ...S(4.85, 0, 1.6, 4.3, 3.5, 0.7), visualH: 0.9 },
     S(0, 3.1, 1.6, 2.2, 0.4, 0.7),
     // creek channel
-    S(0, -3, -4.3, 3, 0.5, 4.2, 'stone'),
-    { ...S(-2.75, -3, -4.3, 2.5, 6, 4.2), visualH: 3.8 },
-    { ...S(2.75, -3, -4.3, 2.5, 6, 4.2), visualH: 3.8 },
-    S(0, -2, -9.7, 8, 2, 6.6, 'snow'),
+    S(0, -3, -4.7, 3, 0.5, 5.0, 'stone'),
+    { ...S(-2.75, -3, -4.7, 2.5, 6, 5.0), visualH: 3.8 },
+    { ...S(2.75, -3, -4.7, 2.5, 6, 5.0), visualH: 3.8 },
+    S(0, -2, -10.1, 8, 2, 5.8, 'snow'),
     // borders
     { ...S(-5, -2, -2, 2, 4.6, 23), visualH: 2.7 },
     { ...S(5, -2, -2, 2, 4.6, 23), visualH: 2.7 },
@@ -72,7 +72,7 @@ const level1: LevelDef = {
   ],
   bodies: [
     { id: 'door', mat: 'water', mass: iceMass(L1door), T: -6 },
-    { id: 'creek', mat: 'water', mass: 756, T: 1, maxT: 40 },
+    { id: 'creek', mat: 'water', mass: 900, T: 1, maxT: 40 },
     ...sinks,
   ],
   drains: [{ from: 'door', to: 'runoff', phase: 'liquid', rate: 500 }],
@@ -83,7 +83,7 @@ const level1: LevelDef = {
       id: 'creek',
       labelHe: 'נחל (שכבת המים העליונה)',
       body: 'creek',
-      area: { x: 0, z: -4.3, w: 3, d: 4.2 },
+      area: { x: 0, z: -4.7, w: 3, d: 5.0 },
       floorY: -2.5,
       levelMode: 'fixed',
       surfaceY: -0.35,
@@ -95,7 +95,7 @@ const level1: LevelDef = {
   checkpoints: [
     { x: 0, y: 0, z: 6.5 },
     { x: 0, y: 0, z: -1.2 },
-    { x: 0, y: 0, z: -8 },
+    { x: 0, y: 0, z: -8.5 },
   ],
   hintSteps: [
     { target: 'door', glyph: 'heat', textHe: 'החזיקו כדי לחמם את דלת הקרח', done: solidGone('door') },
@@ -103,7 +103,7 @@ const level1: LevelDef = {
     { target: 'exit', glyph: 'go', textHe: 'למגדלור!', done: never },
   ],
   takeawayHe:
-    'הקרח נמס ב־0°C — והמדחום נשאר על 0°C עד שכל הקרח נמס. כשהנחל קפא, המים מסרו חום, והסוללה התמלאה. החלקיקים לא עוצרים: במוצק הם רק רוטטים במקום.',
+    'הקרח נמס ב־0°C — והמדחום נשאר על 0°C עד שכל הקרח נמס. כשהנחל קפא, המים מסרו חום, והסוללה נטענה. החלקיקים לא עוצרים: במוצק הם רק רוטטים במקום.',
 };
 
 // ------------------------------------------------------------------ 2. Steam Lift
@@ -144,6 +144,7 @@ const level2: LevelDef = {
     ...sinks,
   ],
   links: [{ a: 'plate', b: 'balloon', G: 900 }],
+  ambient: [{ body: 'tank', G: 3 }],
   drains: [
     { from: 'basin', to: 'balloon', phase: 'gas', rate: Infinity },
     { from: 'balloon', to: 'tank', phase: 'liquid', rate: 60 },
@@ -218,16 +219,16 @@ const level2: LevelDef = {
     { target: 'exit', glyph: 'go', textHe: 'השער פתוח!', done: never },
   ],
   takeawayHe:
-    '150 ק״ג קרח הפכו ל־150 ק״ג מים, ל־150 ק״ג אדים (שתפסו בלון ענק!) ושוב ל־150 ק״ג מים. במעבר בין מצבי צבירה המסה לא משתנה — רק המרחק בין החלקיקים. האדים עצמם שקופים; הענן הלבן הוא טיפות זעירות.',
+    '150 ק״ג קרח הפכו ל־150 ק״ג מים, ל־150 ק״ג אדים (שתפסו בלון ענק!) ושוב ל־150 ק״ג מים. במעבר בין מצבי צבירה המסה לא משתנה — רק הסידור והמרחקים בין החלקיקים. האדים עצמם שקופים; הענן הלבן הוא טיפות זעירות.',
 };
 
 // ------------------------------------------------------------------ 3. Heat Paths
 const L3lock: Box = { x: 0, y: 2.6, z: -0.75, w: 0.38, h: 0.38, d: 0.38 };
 const L3latch: Box = { x: 0, y: 2.6, z: -10.75, w: 0.4, h: 0.4, d: 0.4 };
 
-const glassWall = (z: number, gateW: number, top = 3.6): StaticBox[] => [
-  S(-(4.5 + gateW / 2) / 2, 0, z, 4.5 - gateW / 2, top, 0.2, 'glass'),
-  S((4.5 + gateW / 2) / 2, 0, z, 4.5 - gateW / 2, top, 0.2, 'glass'),
+const glassWall = (z: number, gateW: number, top = 3.6, half = 4.5): StaticBox[] => [
+  S(-(half + gateW / 2) / 2, 0, z, half - gateW / 2, top, 0.2, 'glass'),
+  S((half + gateW / 2) / 2, 0, z, half - gateW / 2, top, 0.2, 'glass'),
   S(0, 2.5, z, gateW, top - 2.5, 0.2, 'glass'),
 ];
 
@@ -258,6 +259,8 @@ const level3: LevelDef = {
     { id: 'latch', mat: 'water', mass: iceMass(L3latch), T: -8 },
     { id: 'dark', mat: 'basalt', mass: 375, T: -8, maxT: 400 },
     { id: 'vent', mat: 'iron', mass: 1234, T: -8, maxT: 160 },
+    { id: 'ironBench', mat: 'iron', mass: 120, T: -8, maxT: 40 },
+    { id: 'woodBench', mat: 'wood', mass: 40, T: -8, maxT: 40 },
     ...sinks,
   ],
   links: [{ a: 'dark', b: 'latch', G: 60 }],
@@ -271,6 +274,8 @@ const level3: LevelDef = {
     { from: 'latch', to: 'runoff', phase: 'liquid', rate: 200 },
   ],
   entities: [
+    { kind: 'plate', id: 'ironBench', labelHe: 'ספסל ברזל', body: 'ironBench', role: 'bench', box: { x: -3.4, y: 0, z: 5.2, w: 1.0, h: 0.5, d: 1.6 }, targetable: true },
+    { kind: 'plate', id: 'woodBench', labelHe: 'ספסל עץ', body: 'woodBench', role: 'bench', box: { x: 3.4, y: 0, z: 5.2, w: 1.0, h: 0.5, d: 1.6 }, targetable: true },
     { kind: 'rod', id: 'copperRod', labelHe: 'מוט נחושת', mat: 'copper', from: { x: -2.0, y: 1.1, z: 1.3 }, to: { x: -0.22, y: 2.75, z: -0.75 }, radius: 0.06, segments: 5, T: -8, touches: 'lock', targetable: true },
     { kind: 'rod', id: 'woodRod', labelHe: 'מוט עץ', mat: 'wood', from: { x: 2.0, y: 1.1, z: 1.3 }, to: { x: 0.22, y: 2.75, z: -0.75 }, radius: 0.06, segments: 5, T: -8, touches: 'lock', targetable: true },
     { kind: 'ice', id: 'lock', labelHe: 'מנעול קרח', body: 'lock', box: L3lock, drainTo: 'runoff', targetable: true, tint: 'clear' },
@@ -308,7 +313,7 @@ const level3: LevelDef = {
     { target: 'exit', glyph: 'go', textHe: 'למגדלור!', done: never },
   ],
   takeawayHe:
-    'חום עובר בשלוש דרכים: הולכה — בנחושת מהר, בעץ כמעט לא; קרינה — אור השמש עובר דרך זכוכית ונבלע במשטח כהה, ומשטח לבן מחזיר אותו; הסעה — אוויר חם עולה ונושא אתכם.',
+    'חום עובר בשלוש דרכים: הולכה — בנחושת מהר, בעץ כמעט לא; קרינה — אור השמש עובר דרך זכוכית ונבלע במשטח כהה, ומשטח לבן מחזיר אותו; הסעה — אוויר חם עולה ונושא אתכם. במשחק ההולכה מואצת מאוד: במציאות חום עובר לאורך מוט נחושת של 3 מ׳ בערך יממה, ולאורך מוט עץ — שנים.',
 };
 
 // ------------------------------------------------------------------ 4. Squeeze
@@ -344,7 +349,7 @@ const level4: LevelDef = {
   ],
   bodies: [
     { id: 'dry', mat: 'dryIce', mass: Math.round(L4dry.w * L4dry.h * L4dry.d * 1560), T: -78.5, phase: 'solid', minT: -100 },
-    { id: 'airpipe', mat: 'air', mass: 2, T: -8, maxT: 120 },
+    { id: 'airpipe', mat: 'air', mass: 2, T: -8, maxT: -8 },
     { id: 'waterpipe', mat: 'water', mass: 200, T: -12, maxT: 95 },
     ...sinks,
   ],
@@ -383,7 +388,7 @@ const level4: LevelDef = {
     { target: 'exit', glyph: 'go', textHe: 'השער פתוח!', done: never },
   ],
   takeawayHe:
-    'קרח יבש (CO₂) הופך ישר לגז — המראה, בלי שלב נוזל. גז נדחס: הבוכנה שוקעת וקופצת חזרה. נוזל כמעט לא נדחס, ולכן הדחיפה עוברת דרכו עד השער (הידראוליקה). מוצק נועל את הצינור.',
+    'קרח יבש (CO₂) הופך ישר לגז שקוף — המראה, בלי שלב נוזל. הערפל הלבן הוא טיפות מים מהאוויר שהתקררו ליד הקרח היבש — הפחמן הדו־חמצני עצמו שקוף. גז נדחס: הבוכנה שוקעת וקופצת חזרה. נוזל כמעט לא נדחס, ולכן הדחיפה עוברת דרכו עד השער (הידראוליקה). מוצק לא נדחס וגם לא זורם — הקרח תקוע בצינור ונועל אותו.',
 };
 
 // ------------------------------------------------------------------ 5. Plateau (grade 9)
@@ -392,7 +397,7 @@ const level5: LevelDef = {
   index: 5,
   nameHe: 'מישור',
   objectiveHe: 'טפסו בעזרת מעליות המדחום',
-  conceptHe: 'חום כמוס וקיבול חום סגולי (כיתה ט׳)',
+  conceptHe: 'חום כמוס וחום סגולי (כיתה ט׳)',
   spawn: { x: 0, y: 0, z: 3.5 },
   airT: -10,
   battery: { start: 200_000, capacity: 300_000 },
@@ -437,7 +442,7 @@ const level5: LevelDef = {
     { target: 'exit', glyph: 'go', textHe: 'למגדלור!', done: never },
   ],
   takeawayHe:
-    'חום וטמפרטורה הם לא אותו דבר. בזמן ההתכה כל החום שובר את הקשרים בין החלקיקים, והטמפרטורה עומדת (חום כמוס, Q = m·L) — לגוש גדול צריך הרבה יותר. ולמים קיבול חום סגולי גבוה: Q = m·c·ΔT, ולכן אותו חום מחמם ברזל פי 9 יותר.',
+    'חום וטמפרטורה הם לא אותו דבר. בזמן ההתכה כל החום שובר את הקשרים בין החלקיקים, והטמפרטורה עומדת (חום כמוס, Q = m·L) — לגוש גדול צריך הרבה יותר. ולמים חום סגולי גבוה: Q = m·c·ΔT, ולכן אותו חום מעלה את הטמפרטורה של ברזל בערך פי 9 יותר מאשר של אותה מסת מים.',
 };
 
 // ------------------------------------------------------------------ 6. The Observatory (transfer)
@@ -473,15 +478,15 @@ const level6: LevelDef = {
     S(L6fountain.x, 0, L6fountain.z, 1.84, 0.4, 1.84, 'stone'),
     ...rim(L6fountain, 0.4, 0.35),
     // creek channel
-    S(0, -3, -2.6, 3, 0.5, 4.2, 'stone'),
-    { ...S(-3.75, -3, -2.6, 4.5, 6, 4.2), visualH: 3.8 },
-    { ...S(3.75, -3, -2.6, 4.5, 6, 4.2), visualH: 3.8 },
-    S(0, -2, -8.6, 12, 2, 7.8, 'snow'),
+    S(0, -3, -3.0, 3, 0.5, 5.0, 'stone'),
+    { ...S(-3.75, -3, -3.0, 4.5, 6, 5.0), visualH: 3.8 },
+    { ...S(3.75, -3, -3.0, 4.5, 6, 5.0), visualH: 3.8 },
+    S(0, -2, -9.0, 12, 2, 7.0, 'snow'),
     // observatory deck
     S(0, 0, -17.85, 12, 4.5, 10.3, 'basalt'),
     S(L6basin.x, 0, L6basin.z, 1.06, 0.45, 1.06, 'stone'),
     ...rim(L6basin, 0.45, 0.35),
-    ...glassWall(-15, 1.6, 3.6).map((s) => ({ ...s, y: s.y + 4.5 })),
+    ...glassWall(-15, 1.6, 3.6, 6).map((s) => ({ ...s, y: s.y + 4.5 })),
     S(0, 4.5, -20.5, 12, 5.0, 3, 'basalt'),
     { ...S(0, 9.5, -21.8, 12, 3, 0.4), visualH: 0.7 },
     { ...S(0, 4.5, -22.8, 12, 3, 0.4), visualH: 0.7 },
@@ -491,7 +496,7 @@ const level6: LevelDef = {
     { id: 'glacier', mat: 'water', mass: iceMass(L6glacier), T: -12 },
     { id: 'plug', mat: 'water', mass: iceMass(L6plug), T: -12 },
     { id: 'fountain', mat: 'water', mass: 450, T: 2, maxT: 60 },
-    { id: 'creek', mat: 'water', mass: 756, T: 4, maxT: 40 },
+    { id: 'creek', mat: 'water', mass: 900, T: 4, maxT: 40 },
     { id: 'basin', mat: 'water', mass: L6basinKg, T: 10, maxT: 200 },
     { id: 'balloon', mat: 'water', mass: 0, T: 100, phase: 'gas' },
     { id: 'latch', mat: 'water', mass: iceMass(L6latch), T: -12 },
@@ -510,7 +515,7 @@ const level6: LevelDef = {
     { kind: 'ice', id: 'glacier', labelHe: 'קרחון', body: 'glacier', box: L6glacier, drainTo: 'runoff', targetable: true, tint: 'clear' },
     { kind: 'ice', id: 'plug', labelHe: 'פקק קרח', body: 'plug', box: L6plug, drainTo: 'runoff', targetable: true, tint: 'clear' },
     { kind: 'pool', id: 'fountain', labelHe: 'מזרקה', body: 'fountain', area: L6fountain, floorY: 0.4, levelMode: 'volume', targetable: true },
-    { kind: 'pool', id: 'creek', labelHe: 'נחל (שכבת המים העליונה)', body: 'creek', area: { x: 0, z: -2.6, w: 3, d: 4.2 }, floorY: -2.5, levelMode: 'fixed', surfaceY: -0.35, hazard: true, targetable: true },
+    { kind: 'pool', id: 'creek', labelHe: 'נחל (שכבת המים העליונה)', body: 'creek', area: { x: 0, z: -3.0, w: 3, d: 5.0 }, floorY: -2.5, levelMode: 'fixed', surfaceY: -0.35, hazard: true, targetable: true },
     { kind: 'pool', id: 'basin', labelHe: 'אגן', body: 'basin', area: L6basin, floorY: 0.45, levelMode: 'volume', markKg: L6basinKg, targetable: true },
     { kind: 'balloon', id: 'balloon', labelHe: 'בלון אדים', body: 'balloon', x: 0.8, z: -11.5, baseY: 0.35, rise: 4.15, fullKg: L6basinKg, platform: { w: 2.2, d: 2.2 }, targetable: true },
     { kind: 'rod', id: 'copperRod', labelHe: 'מוט נחושת', mat: 'copper', from: { x: 2.0, y: 5.6, z: -13.7 }, to: { x: 0.22, y: 7.25, z: -15.75 }, radius: 0.06, segments: 5, T: -12, touches: 'latch', targetable: true },

@@ -1,8 +1,8 @@
 // Gameplay state and rules (no Three.js). The renderer reads this; tests drive it
 // with the same Input the keyboard/touch controls produce.
 
-import { HeatBattery, ThermalSystem, transferMass, type Body } from '../sim/thermal';
-import { type Phase } from '../sim/materials';
+import { HeatBattery, ThermalSystem, conductance, transferMass, type Body } from '../sim/thermal';
+import { MATERIALS, type Phase } from '../sim/materials';
 import { clamp, dist, distXZ, overlaps, segmentHitsAABB, toAABB, type AABB, type Box, type V3 } from './geom';
 import type { EntityDef, HintStep, LevelDef, LiftDef, BalloonDef, PoolDef, RodDef, PlungerDef } from './types';
 
@@ -39,7 +39,9 @@ export type GameEvent =
   | { type: 'jump' }
   | { type: 'land' }
   | { type: 'plunger'; id: string; result: 'squish' | 'push' | 'locked' }
-  | { type: 'hint'; index: number };
+  | { type: 'hint'; index: number }
+  | { type: 'coldFloor'; id: string }
+  | { type: 'bench'; id: string };
 
 export interface Collider {
   box: AABB;
@@ -152,13 +154,12 @@ export class Game {
     const segL = len / rod.segments;
     const area = Math.PI * rod.radius * rod.radius;
     const mat = rod.mat;
-    const density = { copper: 8960, wood: 600, iron: 7870 }[mat];
-    const k = { copper: 400, wood: 0.15, iron: 80 }[mat];
+    const density = MATERIALS[mat].density.solid!;
     const ids = this.rodBodies(rod);
     ids.forEach((id) =>
       this.sys.add({ id, mat, mass: density * area * segL, T: rod.T, maxT: mat === 'wood' ? 180 : 320, minT: -30 }),
     );
-    const G = ((k * area) / segL / 1000) * 30000;
+    const G = conductance(MATERIALS[mat].k, area, segL);
     for (let i = 0; i < ids.length - 1; i++) this.sys.link(ids[i], ids[i + 1], G);
     if (rod.touches) this.sys.link(ids[ids.length - 1], rod.touches, G);
   }
@@ -224,6 +225,29 @@ export class Game {
     return st.changing;
   }
 
+  /** Total water in the bodies linked to this one by drains (sinks excluded): what the lens shows as conserved. */
+  systemMass(bodyId: string): number {
+    const seen = new Set([bodyId]);
+    const todo = [bodyId];
+    while (todo.length) {
+      const id = todo.pop()!;
+      for (const d of this.def.drains ?? []) {
+        for (const [a, b] of [
+          [d.from, d.to],
+          [d.to, d.from],
+        ]) {
+          if (a === id && !seen.has(b) && b !== 'runoff' && b !== 'co2air') {
+            seen.add(b);
+            todo.push(b);
+          }
+        }
+      }
+    }
+    let m = 0;
+    for (const id of seen) m += this.body(id).mass;
+    return m;
+  }
+
   /** Fraction of the original solid still there (for walls that melt). */
   solidLeft(bodyId: string): number {
     const b = this.body(bodyId);
@@ -244,6 +268,9 @@ export class Game {
     this.input = input;
     if (this.paused || this.won) return;
     this.t += dt;
+    this.received.clear();
+    this.movedH.clear();
+    for (const [id, b] of this.sys.bodies) this.prevH.set(id, b.H);
     this.updateKinematics(dt);
     this.rebuildColliders();
     this.updatePlayer(dt);
@@ -628,8 +655,9 @@ export class Game {
     // face the target while aiming
     p.yaw = Math.atan2(a.x - hand.x, -(a.z - hand.z));
     // glass and closed gates block the glove's spark stream
-    const blockers = this.def.statics.filter((s) => s.style === 'glass').map((s) => toAABB(s));
-    for (const c of this.colliders) if (c.id !== e.id && this.def.entities.some((x) => x.id === c.id && x.kind === 'gate')) blockers.push(c.box);
+    // the glove needs a clear line: glass, rock walls, closed gates and other ice walls block it
+    const blockers = this.def.statics.filter((s) => !s.ghost && (s.style === 'glass' || s.style === 'basalt' || s.style === 'snow' || s.style === 'dark')).map((s) => toAABB(s));
+    for (const c of this.colliders) if (c.id !== e.id && this.def.entities.some((x) => x.id === c.id && (x.kind === 'gate' || x.kind === 'ice'))) blockers.push(c.box);
     for (const box of blockers) {
       const hit = segmentHitsAABB(hand, a, box);
       if (hit !== null) {
@@ -643,6 +671,8 @@ export class Game {
     }
     const power = GLOVE_POWER * Math.min(1, 0.35 + (0.65 * this.gloveHold) / GLOVE_RAMP);
     const body = this.body(this.bodyOf(e)!);
+    if (started && mode === 'cold' && body.T <= this.def.airT + 0.1) this.events.push({ type: 'coldFloor', id: e.id });
+    if (started && e.kind === 'plate' && e.role === 'bench') this.events.push({ type: 'bench', id: e.id });
     // the cold glove pumps heat out of things only while they are warmer than the air around them
     const moved = this.battery.apply(body, mode, power, dt, this.def.airT);
     if (moved !== 0) this.lastDir.set(body.id, moved > 0 ? 'up' : 'down');
@@ -692,7 +722,7 @@ export class Game {
       const from = this.body(d.from);
       const to = this.body(this.drainTarget(d.from, d.to));
       const amt = d.rate === Infinity ? from.massOf(d.phase) : d.rate * dt;
-      if (amt > 0) transferMass(from, to, d.phase, amt);
+      if (amt > 0) this.moved(from, to, d.phase, amt);
     }
     // a melting wall: any vapour rises away, and once the solid is gone the last water runs off
     for (const e of this.def.entities) {
@@ -700,8 +730,8 @@ export class Game {
       const b = this.body(e.body);
       if (b.mass <= 0) continue;
       const to = this.body(e.drainTo);
-      if (b.massOf('gas') > 0 && to.mat === b.mat) transferMass(b, to, 'gas', Infinity);
-      if (b.massOf('solid') < 1e-3 && to.mat === b.mat) transferMass(b, to, 'liquid', Infinity);
+      if (b.massOf('gas') > 0 && to.mat === b.mat) this.moved(b, to, 'gas', Infinity);
+      if (b.massOf('solid') < 1e-3 && to.mat === b.mat) this.moved(b, to, 'liquid', Infinity);
     }
     this.sys.conduct(dt);
   }
@@ -721,7 +751,28 @@ export class Game {
     return basin ? basin.from : to;
   }
 
+  /** Records mass (and its enthalpy) moved by drains this step, so phase events can ignore it. */
+  private moved(from: Body, to: Body, phase: Phase, amt: number) {
+    const h0 = from.H;
+    const t0 = to.H;
+    const m = transferMass(from, to, phase, amt);
+    if (m > 0) {
+      this.movedH.set(from.id, (this.movedH.get(from.id) ?? 0) + (from.H - h0));
+      this.movedH.set(to.id, (this.movedH.get(to.id) ?? 0) + (to.H - t0));
+      this.received.add(to.id);
+    }
+  }
+
+  private prevH = new Map<string, number>();
+  private movedH = new Map<string, number>();
+  private received = new Set<string>();
+
   private detectPhaseEvents() {
+    // which way did each body's energy move by heating/cooling (not by mass arriving or leaving)?
+    for (const [id, b] of this.sys.bodies) {
+      const d = b.H - (this.prevH.get(id) ?? b.H) - (this.movedH.get(id) ?? 0);
+      if (Math.abs(d) > 1e-3) this.lastDir.set(id, d > 0 ? 'up' : 'down');
+    }
     const walls = new Set(this.def.entities.filter((e) => e.kind === 'ice').map((e) => (e as { body: string }).body));
     for (const [id, b] of this.sys.bodies) {
       if (b.mass <= 1e-2 || id === 'runoff' || id === 'co2air') {
@@ -733,6 +784,8 @@ export class Game {
       this.lastPhase.set(id, now);
       if (!was) continue;
       const down = this.lastDir.get(id) === 'down';
+      // a body that only received mass this step (steam arriving, condensate landing) is not changing phase by itself
+      if (this.received.has(id)) continue;
       if (now.changing && now.changing !== was.changing) {
         let [from, to] = now.changing.split('>') as [Phase, Phase];
         if (down) [from, to] = [to, from];
@@ -748,7 +801,9 @@ export class Game {
         // left the plateau: forward if we ended in the new phase, backward otherwise
         const [from, to] = now.dom === c ? [a, c] : [c, a];
         const key = `${from}>${to}`;
-        if (now.dom === to && this.lastDone.get(id) !== key) {
+        // a backward finish only counts if energy was really leaving (not steam draining away)
+        const genuine = now.dom === c || down;
+        if (genuine && now.dom === to && this.lastDone.get(id) !== key) {
           this.lastDone.set(id, key);
           this.lastStart.delete(id);
           this.events.push({ type: 'phase', id, from, to, done: true });

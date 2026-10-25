@@ -297,7 +297,9 @@ export class LevelView {
         this.addBalloon(e);
         break;
       case 'plate': {
-        const matBase = e.role === 'absorber' ? (M.dark as THREE.MeshStandardMaterial) : e.role === 'vent' ? (M.iron as THREE.MeshStandardMaterial) : (M.copper as THREE.MeshStandardMaterial);
+        const benchMat = e.role === 'bench' ? (this.game.body(e.body).mat === 'wood' ? M.wood : M.iron) : null;
+        const matBase = (benchMat ??
+          (e.role === 'absorber' ? M.dark : e.role === 'vent' ? M.iron : M.copper)) as THREE.MeshStandardMaterial;
         const mat = matBase.clone();
         const base = mat.color.clone();
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(e.box.w, e.box.h, e.box.d), mat);

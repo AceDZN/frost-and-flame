@@ -122,8 +122,8 @@ function showTitle() {
   const next = LEVELS.findIndex((l) => save.stars[l.id] === undefined);
   screen.innerHTML = `<div class="card brass-frame">
     <h1>כפור ולהבה</h1>
-    <p style="font-size:20px">המיסו, הקפיאו, הרתיחו ועבו — וחצו את אי המצפה הקפוא.</p>
-    <p><span style="color:#ff8a2a">🔥 כפפת חום</span> מוציאה אנרגיה מהסוללה. <span style="color:#5cc8ff">❄️ כפפת קור</span> שואבת חום מדברים ומטעינה אותה.</p>
+    <p style="font-size:20px">המיסו, הקפיאו, הרתיחו והחזירו אדים למים — וחצו את אי המצפה הקפוא.</p>
+    <p><span style="color:#ff8a2a">🔥 כפפת חום</span> מוציאה אנרגיה מהסוללה. <span style="color:#5cc8ff">❄️ כפפת קור</span> שואבת חום מדברים ומטעינה אותה. כל כפפה מעבירה עד <span class="ltr">100 MJ</span> בשנייה.</p>
     <button class="big-btn" id="go">${next > 0 ? 'המשיכו' : 'שחקו'}</button>
     <div class="levels">${levelButtons()}</div>
     <div class="toggles">
@@ -288,7 +288,7 @@ function handleEvents() {
           sfx.splash();
           if (at) view.splash(at);
           shake = 0.35;
-          if (ent.kind === 'ice') hud.toast(`${ent.labelHe} נמס — אותה מסה, עכשיו מים`, 'heat');
+          if (ent.kind === 'ice') hud.toast('הקרח נמס — אותה מסה, עכשיו מים שזורמים הלאה', 'heat');
         } else if (k === 'liquid>solid') {
           sfx.frost();
           if (at) view.burst(at, 0xbfefff, 60);
@@ -300,7 +300,7 @@ function handleEvents() {
           hud.toast('האדים התעבו בחזרה למים', 'cold');
         } else if (k === 'solid>gas') {
           sfx.whoosh();
-          hud.toast('המראה! הקרח היבש הפך ישר לגז — בלי שלולית', 'heat', 3200);
+          hud.toast('המראה! הקרח היבש הפך ישר לגז שקוף — בלי שלולית', 'heat', 3200);
         }
         break;
       }
@@ -317,12 +317,12 @@ function handleEvents() {
       case 'glass':
         sfx.glass();
         if (view) view.burst(new THREE.Vector3(ev.at.x, ev.at.y, ev.at.z), game.glove === 'cold' ? 0x9be4ff : 0xffa040, 20, 0.18);
-        hud.toast('הכפפה לא עוברת דרך זכוכית או דלת', '', 2200);
+        hud.toast('הכפפה צריכה קו ישיר — זכוכית, קירות ודלתות חוסמים אותה', '', 2400);
         break;
       case 'battery':
         if (ev.state === 'empty') {
           sfx.empty();
-          hud.toast('הסוללה ריקה — שאבו חום (❄️) ממשהו כדי לטעון אותה', 'heat', 3200);
+          hud.toast('הסוללה ריקה — שאבו חום (❄️) ממשהו חם יותר מהאוויר', 'heat', 3200);
         } else {
           sfx.full();
           hud.toast('הסוללה מלאה', 'cold');
@@ -339,7 +339,7 @@ function handleEvents() {
           hud.toast('פששש… הגז נדחס — והשער כמעט לא זז', '', 2600);
         } else if (ev.result === 'push') {
           sfx.thunk();
-          hud.toast('המים לא נדחסים — הדחיפה עברה עד השער!', 'cold', 2600);
+          hud.toast('המים כמעט לא נדחסים — הדחיפה עברה עד השער!', 'cold', 2600);
         } else {
           sfx.thunk();
           hud.toast('נעול — הצינור מלא קרח', 'cold', 2400);
@@ -357,6 +357,14 @@ function handleEvents() {
         showWin();
         break;
       case 'hint':
+        break;
+      case 'coldFloor': {
+        const ent = game.def.entities.find((x) => x.id === ev.id);
+        hud.toast(`${ent?.labelHe ?? ''}: כבר קר כמו האוויר — הכפפה שואבת חום רק מדברים חמים מהאוויר`, 'cold', 3200);
+        break;
+      }
+      case 'bench':
+        hud.toast('שני הספסלים באותה טמפרטורה! ברזל רק מוליך חום מהיד מהר יותר — ולכן מרגיש קר יותר', '', 3800);
         break;
     }
   }

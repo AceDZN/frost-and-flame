@@ -16,12 +16,12 @@ const CHANGE_HE: Record<string, string> = {
   'solid>liquid': 'התכה',
   'liquid>gas': 'רתיחה',
   'gas>liquid': 'עיבוי',
-  'liquid>solid': 'קיפאון',
+  'liquid>solid': 'הקפאה',
   'solid>gas': 'המראה',
   'gas>solid': 'ריבוץ',
 };
 
-const PHASE_ICON: Record<Phase, string> = { solid: '🧊', liquid: '💧', gas: '♨️' };
+const PHASE_ICON: Record<Phase, string> = { solid: '🧊', liquid: '💧', gas: '◌' };
 
 export function fmtMJ(kJ: number) {
   const mj = kJ / 1000;
@@ -29,8 +29,8 @@ export function fmtMJ(kJ: number) {
 }
 
 function fmtT(T: number) {
-  const r = Math.abs(T) < 0.05 ? 0 : T;
-  return `${r.toFixed(Math.abs(r) < 10 && r % 1 !== 0 ? 1 : 0).replace('-', '−')} °C`;
+  const r = Math.abs(T) < 0.05 ? 0 : Math.round(T * 10) / 10;
+  return `${r.toFixed(Math.abs(r) < 100 && r % 1 !== 0 ? 1 : 0).replace('-', '−')} °C`;
 }
 
 export interface HudCallbacks {
@@ -358,7 +358,9 @@ export class Hud {
     if (lensOn && lensTarget) {
       const b = g.body(lensTarget.bodyId);
       const st = b.state;
-      const phases: Phase[] = st.changing ? [st.changing.from, st.changing.to] : [(Object.keys(st.frac) as Phase[]).reduce((a, k) => (st.frac[k] > st.frac[a] ? k : a), 'solid' as Phase)];
+      const ch = g.changeOf(lensTarget.bodyId);
+      const down = (g.lastDir.get(lensTarget.bodyId) ?? 'up') === 'down' && ch === st.changing;
+      const phases: Phase[] = ch ? (down ? [ch.to, ch.from] : [ch.from, ch.to]) : [(Object.keys(st.frac) as Phase[]).reduce((a, k) => (st.frac[k] > st.frac[a] ? k : a), 'solid' as Phase)];
       this.lens.draw({ mat: b.mat, T: st.T, phases }, dt);
       const p = project(lensTarget.ent.id);
       const W = this.el.clientWidth;
@@ -385,7 +387,16 @@ export class Hud {
         this.lensTags.left.hidden = true;
         this.lensTags.right.textContent = `${name(phases[0])} · ${mat.phaseNameHe[phases[0]] ?? mat.nameHe}`;
       }
-      this.lensTags.bottom.innerHTML = `🔒 מסה: <span class="ltr">${b.mass.toFixed(b.mass < 10 ? 1 : 0)}</span> ק״ג${mat.formula ? ` · <span class="ltr">${mat.formula}</span>` : ''}`;
+      // the lock means "conserved": show the total that really stays constant
+      const kg = (m: number) => `<span class="ltr">${m.toFixed(m < 10 ? 1 : 0)}</span> ק״ג`;
+      const f = mat.formula ? ` · <span class="ltr">${mat.formula}</span>` : '';
+      const wall = g.def.entities.find((x) => x.kind === 'ice' && x.body === lensTarget.bodyId);
+      const init = g.def.bodies.find((x) => x.id === lensTarget.bodyId)?.mass ?? b.mass;
+      if (wall && init - b.mass > 0.5) this.lensTags.bottom.innerHTML = `🔒 סה״כ ${kg(init)} · ${mat.phaseNameHe.solid ?? mat.nameHe} ${kg(b.mass)} + ${b.mat === 'dryIce' ? 'גז שהתפזר' : 'מים שזרמו'} ${kg(init - b.mass)}`;
+      else {
+        const sys = g.systemMass(lensTarget.bodyId);
+        this.lensTags.bottom.innerHTML = sys - b.mass > 0.5 ? `🔒 כל המים במערכת ${kg(sys)} · כאן ${kg(b.mass)}` : `🔒 מסה: ${kg(b.mass)}${f}`;
+      }
     } else {
       this.lensWrap.hidden = true;
       this.vignette.hidden = true;
