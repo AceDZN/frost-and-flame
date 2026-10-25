@@ -99,3 +99,24 @@ Not done: no separate `walk` clip (use `run` with a lower `timeScale`, or ask fo
 - Source image `ref-plunger.png`. Task: https://studio.tripo3d.ai/workspace/generate/53dc9822-02d0-4b27-9acf-6c4316955da8 — 30 credits.
 - Horizontal along X (1.0 long, 0.49 tall, 0.41 deep) on a basalt slab: at **−X** a tall brass cylinder with a T-handle (the highest point, y ≈ 0.49), a clear glass pipe in the middle with a pressure gauge on top, and at **+X** the second cylinder and a ram plate.
 - Single mesh: the T-handle, piston and ram don't move. Animate procedural stand-ins (a brass cylinder for the piston, a box for the ram) over or instead of the baked parts. Show the pipe's contents (steam, water, ice) with procedural geometry inside the glass section (roughly the middle third of X).
+
+## Processing by the crew lead (26 Oct 2026)
+
+Textures re-encoded to WebP (quality 85) with `npx @gltf-transform/cli@4 webp in.glb out.glb`; geometry, skin and animation clips untouched (all six clips verified loading in Three.js afterwards). The table above lists the raw Tripo files; the shipped files are:
+
+| File | Bytes (raw → shipped) | sha256 (shipped) |
+|---|---|---|
+| explorer.glb | 2,457,928 → 1,944,536 | `aae3ee7bfb40077df6e286ff9a6a8cb6c2ecb1d0cee049ef6acdb63d4eedba4d` |
+| observatory.glb | 1,473,980 → 855,596 | `00a2ab1db7b819ab5166210428ec2aa1cc9c55ea280c85971a9f1ac83d4ffeff` |
+| balloon.glb | 1,370,472 → 819,528 | `87f0c8064f2d295bbc99bd30b2fbaa51433dde4e0880dd097c75c0bb89cd1d68` |
+| thermo-lift.glb | 1,382,576 → 842,404 | `71e8fc7d9fbd8182587bed281733c9736da36c4e51e5ba335eb9398b101b2505` |
+| sun-mirror.glb | 1,127,644 → 705,700 | `9b7339c16ab7e908c58b56a76c0db6382ccaa80e6cb891a977c6d9e9d6a39864` |
+| plunger.glb | 1,292,924 → 786,592 | `44b3f2b09e762f12b0025579e131191ee6e22ef5f5566a86a339bebca425e4c3` |
+
+How each model is used in gameplay:
+- **explorer** — the player character (AnimationMixer: idle, run, the first hop of the jump loop, aim while a glove is held, cheer on the win). A procedural brass battery backpack and glove glows are attached in code.
+- **balloon** — split with two clipping planes: the basket is the steam-lift ride (fixed size), the envelope swells with the gas mass (radius from the real 100 °C steam volume, visually capped).
+- **sun-mirror** — the level 3 heliostat; it turns to bisect the sunbeam and the chosen target.
+- **plunger** — pump bodies beside the two level 4 plungers (the interactive plunger disc, pipes and glass bulb are procedural).
+- **thermo-lift** — brass thermometer towers beside the level 5 lifts (the live liquid column and platform are procedural).
+- **observatory** — landmark in every level; the goal building in level 6.
