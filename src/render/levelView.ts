@@ -634,24 +634,46 @@ export class LevelView {
     const basinEnt = basin ? this.game.def.entities.find((x) => x.kind === 'pool' && x.body === basin.from) : null;
     const hose = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1, 8), M.brass);
     this.root.add(hose);
-    const tripo = this.models.get('balloon');
-    if (tripo) {
+    // Tripo balloon split in two with clipping planes: its basket is the ride (fixed size),
+    // its envelope swells with the gas inside (radius from the real steam volume).
+    const basketModel = this.models.get('balloon');
+    const envModel = this.models.get('balloon');
+    const basketCut = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+    const envCut = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const clipWith = (o: THREE.Object3D, plane: THREE.Plane) =>
+      o.traverse((m) => {
+        const mesh = m as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const mat = (mesh.material as THREE.MeshStandardMaterial).clone();
+        mat.clippingPlanes = [plane];
+        mat.side = THREE.DoubleSide;
+        mesh.material = mat;
+      });
+    if (basketModel && envModel) {
+      clipWith(basketModel, basketCut);
+      clipWith(envModel, envCut);
       env.visible = false;
       ribs.visible = false;
-      ropes.forEach((r) => (r.visible = false));
-      this.root.add(tripo);
+      deck.children.forEach((c) => (c.visible = false));
+      this.root.add(basketModel, envModel);
     }
+    const BASKET_S = e.platform.w / 0.42;
     const anchor = this.anchorObj(e.id);
     this.updaters.push((game, _dt, t) => {
       const top = game.heights.get(e.id)!;
       deck.position.set(e.x, top, e.z);
-      if (tripo) {
-        // the model is ~0.59 wide per unit of height; scale it so the envelope has the gas volume's radius
-        const rr = this.balloonRadius(game, e);
-        const S = (2 * Math.min(rr, 3)) / 0.59;
-        tripo.scale.setScalar(S);
-        tripo.position.set(e.x, top + 0.05, e.z);
-        tripo.rotation.y = Math.sin(t * 0.4) * 0.08;
+      if (basketModel && envModel) {
+        // model profile: basket floor at 0.10 of its height, basket top 0.31, envelope from 0.42 (max radius 0.30)
+        basketModel.scale.setScalar(BASKET_S);
+        basketModel.position.set(e.x, top - 0.1 * BASKET_S, e.z);
+        basketCut.constant = top + 0.21 * BASKET_S;
+        const rr = Math.min(this.balloonRadius(game, e), 3.2);
+        const S = rr / 0.3;
+        const bottom = top + 1.9;
+        envModel.scale.setScalar(S);
+        envModel.position.set(e.x, bottom - 0.42 * S, e.z);
+        envModel.rotation.y = Math.sin(t * 0.4) * 0.06;
+        envCut.constant = -(bottom - 0.02 * S);
       }
       const r = this.balloonRadius(game, e);
       const full = clamp(game.body(e.body).massOf('gas') / e.fullKg, 0, 1);
@@ -668,10 +690,13 @@ export class LevelView {
         [-1, -1],
       ];
       corners.forEach(([sx, sz], i) => {
-        stretch(ropes[i], tmp.set(e.x + (sx * e.platform.w) / 2.2, top + 0.7, e.z + (sz * e.platform.d) / 2.2), new THREE.Vector3(e.x + sx * r * 0.6, cy - r * 0.75, e.z + sz * r * 0.6));
+        if (basketModel) {
+          const rr = Math.min(this.balloonRadius(game, e), 3.2);
+          stretch(ropes[i], tmp.set(e.x + (sx * e.platform.w) / 2.5, top + 1.25, e.z + (sz * e.platform.d) / 2.5), new THREE.Vector3(e.x + sx * rr * 0.45, top + 1.95 + rr * 0.15, e.z + sz * rr * 0.45));
+        } else stretch(ropes[i], tmp.set(e.x + (sx * e.platform.w) / 2.2, top + 0.7, e.z + (sz * e.platform.d) / 2.2), new THREE.Vector3(e.x + sx * r * 0.6, cy - r * 0.75, e.z + sz * r * 0.6));
       });
       if (basinEnt && basinEnt.kind === 'pool') {
-        stretch(hose, tmp.set(basinEnt.area.x, basinEnt.floorY + 0.5, basinEnt.area.z), new THREE.Vector3(e.x, cy - r * 0.95, e.z));
+        stretch(hose, tmp.set(basinEnt.area.x, basinEnt.floorY + 0.5, basinEnt.area.z), new THREE.Vector3(e.x - e.platform.w / 2.4, top + 0.3, e.z));
       }
       anchor.position.set(e.x, cy - r - 0.1, e.z);
     });

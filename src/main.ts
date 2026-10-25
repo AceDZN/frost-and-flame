@@ -296,7 +296,7 @@ function handleEvents() {
         } else if (k === 'liquid>gas') {
           sfx.whoosh();
           hud.toast('רתח! הגז השקוף ממלא את הבלון', 'heat');
-        } else if (k === 'gas>liquid') {
+        } else if (k === 'gas>liquid' && game.glove === 'cold') {
           hud.toast('האדים התעבו בחזרה למים', 'cold');
         } else if (k === 'solid>gas') {
           sfx.whoosh();

@@ -51,6 +51,7 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.localClippingEnabled = true;
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x8a5f8e, 28, 95);
