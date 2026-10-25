@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Frost & Flame — כפור ולהבה: a third-person 3D puzzle-platformer about states of matter and heat (Hebrew, grades 7 and 9 science).",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5202 --strictPort",
+    "dev": "vite --host 127.0.0.1 --port 5232 --strictPort",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4202 --strictPort",
+    "preview": "vite preview --host 127.0.0.1 --port 4232 --strictPort",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

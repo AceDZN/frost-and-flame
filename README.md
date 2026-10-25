@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Dev server: http://127.0.0.1:5202 (strict port). Other scripts: `npm test` (Vitest), `npm run build` (type-check + static build to `dist/`), `npm run preview` (http://127.0.0.1:4202).
+Dev server: http://127.0.0.1:5232 (strict port). Other scripts: `npm test` (Vitest), `npm run build` (type-check + static build to `dist/`), `npm run preview` (http://127.0.0.1:4232).
 
 Handy URLs: `?level=3` jumps to level 3, `?all` unlocks every level on the title screen.
 
