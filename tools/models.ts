@@ -1,0 +1,31 @@
+// Dev-only gallery of the Tripo models (not part of the game build).
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+const c = document.getElementById('c') as HTMLCanvasElement;
+const r = new THREE.WebGLRenderer({ canvas: c, antialias: true });
+r.setSize(innerWidth, innerHeight, false);
+r.outputColorSpace = THREE.SRGBColorSpace;
+const s = new THREE.Scene();
+s.background = new THREE.Color(0x556);
+s.add(new THREE.HemisphereLight(0xffffff, 0x444466, 2));
+const d = new THREE.DirectionalLight(0xffffff, 2);
+d.position.set(3, 5, 4);
+s.add(d);
+const cam = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 100);
+cam.position.set(0, 1.6, 7.5);
+cam.lookAt(0, 0.5, 0);
+const names = ['explorer', 'observatory', 'balloon', 'thermo-lift', 'sun-mirror', 'plunger'];
+const info: string[] = [];
+await Promise.all(names.map(async (n, i) => {
+  const g = await new GLTFLoader().loadAsync(`/models/${n}.glb`);
+  const box = new THREE.Box3().setFromObject(g.scene);
+  const size = box.getSize(new THREE.Vector3());
+  const k = 1.1 / Math.max(size.x, size.y, size.z);
+  g.scene.scale.setScalar(k);
+  g.scene.position.set((i - 2.5) * 1.3 - box.getCenter(new THREE.Vector3()).x * k, -box.min.y * k, 0);
+  s.add(g.scene);
+  info.push(`${n}: size ${size.toArray().map((v) => v.toFixed(2))} clips ${g.animations.map((a) => a.name + ':' + a.duration.toFixed(1)).join(',')}`);
+}));
+r.render(s, cam);
+(window as any).info = info;
+(window as any).ready = true;

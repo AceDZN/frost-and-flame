@@ -582,7 +582,8 @@ export class Game {
       this.target = this.candidates()[0]?.id ?? null;
       return;
     }
-    if (started || !this.target) {
+    // pick a target when the button goes down; if it is used up mid-hold, the glove idles until released
+    if (started) {
       this.target = this.candidates()[0]?.id ?? null;
       this.gloveHold = 0;
       if (this.target) this.logLearn(mode, this.target);
@@ -593,6 +594,10 @@ export class Game {
     this.gloveBlocked = null;
     if (!this.target) return;
     const e = this.def.entities.find((x) => x.id === this.target)!;
+    if ((e.kind === 'ice' && this.solidLeft(e.body) <= 0.02) || this.body(this.bodyOf(e)!).mass <= 1e-3) {
+      this.target = null;
+      return;
+    }
     const p = this.player;
     const hand = { x: p.pos.x, y: p.pos.y + 1.0, z: p.pos.z };
     const a = this.anchor(e);
@@ -619,6 +624,7 @@ export class Game {
     const power = GLOVE_POWER * Math.min(1, 0.35 + (0.65 * this.gloveHold) / GLOVE_RAMP);
     const body = this.body(this.bodyOf(e)!);
     const moved = this.battery.apply(body, mode, power, dt);
+    if (moved !== 0) this.lastDir.set(body.id, moved > 0 ? 'up' : 'down');
     this.gloveFlow = moved / dt;
     if (mode === 'heat' && this.battery.energy <= 1 && !this.emptyWarned) {
       this.emptyWarned = true;
@@ -667,11 +673,22 @@ export class Game {
       const amt = d.rate === Infinity ? from.massOf(d.phase) : d.rate * dt;
       if (amt > 0) transferMass(from, to, d.phase, amt);
     }
+    // a melting wall: any vapour rises away, and once the solid is gone the last water runs off
+    for (const e of this.def.entities) {
+      if (e.kind !== 'ice') continue;
+      const b = this.body(e.body);
+      if (b.mass <= 0) continue;
+      const to = this.body(e.drainTo);
+      if (b.massOf('gas') > 0 && to.mat === b.mat) transferMass(b, to, 'gas', Infinity);
+      if (b.massOf('solid') < 1e-3 && to.mat === b.mat) transferMass(b, to, 'liquid', Infinity);
+    }
     this.sys.conduct(dt);
   }
 
   /** Energy (kJ) lost to the surrounding air so far — kept for conservation checks. */
   airHeat = 0;
+  /** Which way the gloves last moved each body's energy (for plateau labels). */
+  lastDir = new Map<string, 'up' | 'down'>();
 
   /** A balloon cooled directly drips back into its basin; one cooled by its condenser fills the far pool. */
   drainTarget(from: string, to: string): string {
@@ -684,22 +701,55 @@ export class Game {
   }
 
   private detectPhaseEvents() {
+    const walls = new Set(this.def.entities.filter((e) => e.kind === 'ice').map((e) => (e as { body: string }).body));
     for (const [id, b] of this.sys.bodies) {
-      if (b.mass <= 1e-6) continue;
+      if (b.mass <= 1e-2 || id === 'runoff' || id === 'co2air') {
+        this.lastPhase.delete(id);
+        continue;
+      }
       const now = phaseKey(b);
-      const was = this.lastPhase.get(id)!;
-      if (now.changing && now.changing !== was.changing) {
-        const [from, to] = now.changing.split('>') as [Phase, Phase];
-        this.events.push({ type: 'phase', id, from, to, done: false });
-        this.logLearn(`start-${from}>${to}`, id, b.T);
-      }
-      if (now.dom !== was.dom && !now.changing) {
-        this.events.push({ type: 'phase', id, from: was.dom, to: now.dom, done: true });
-        this.logLearn(`done-${was.dom}>${now.dom}`, id, b.T);
-      }
+      const was = this.lastPhase.get(id);
       this.lastPhase.set(id, now);
+      if (!was) continue;
+      const down = this.lastDir.get(id) === 'down';
+      if (now.changing && now.changing !== was.changing) {
+        let [from, to] = now.changing.split('>') as [Phase, Phase];
+        if (down) [from, to] = [to, from];
+        const key = `${from}>${to}`;
+        if (this.lastStart.get(id) !== key) {
+          this.lastStart.set(id, key);
+          this.events.push({ type: 'phase', id, from, to, done: false });
+          this.logLearn(`start-${key}`, id, b.T);
+        }
+      }
+      if (!now.changing && was.changing && !walls.has(id)) {
+        const [a, c] = was.changing.split('>') as [Phase, Phase];
+        // left the plateau: forward if we ended in the new phase, backward otherwise
+        const [from, to] = now.dom === c ? [a, c] : [c, a];
+        const key = `${from}>${to}`;
+        if (now.dom === to && this.lastDone.get(id) !== key) {
+          this.lastDone.set(id, key);
+          this.lastStart.delete(id);
+          this.events.push({ type: 'phase', id, from, to, done: true });
+          this.logLearn(`done-${key}`, id, b.T);
+        }
+      }
+    }
+    // walls of ice count as melted (or sublimated) once they no longer block the way
+    for (const e of this.def.entities) {
+      if (e.kind !== 'ice' || this.brokenWalls.has(e.id)) continue;
+      if (this.solidLeft(e.body) < 0.12) {
+        this.brokenWalls.add(e.id);
+        const to: Phase = this.body(e.body).mat === 'dryIce' ? 'gas' : 'liquid';
+        this.events.push({ type: 'phase', id: e.body, from: 'solid', to, done: true });
+        this.logLearn(`done-solid>${to}`, e.id);
+      }
     }
   }
+
+  private lastStart = new Map<string, string>();
+  private lastDone = new Map<string, string>();
+  private brokenWalls = new Set<string>();
 
   // ---------------------------------------------------------------- hints / exit
 

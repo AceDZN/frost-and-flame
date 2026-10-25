@@ -4,9 +4,26 @@
     {
       "name": "frost-and-flame",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5202,
       "url": "http://127.0.0.1:5202"
+    },
+    {
+      "name": "frost-and-flame-temp",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5212",
+        "--strictPort"
+      ],
+      "port": 5212,
+      "url": "http://127.0.0.1:5212"
     }
   ]
 }

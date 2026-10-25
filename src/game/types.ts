@@ -9,6 +9,8 @@ export interface StaticBox extends Box {
   style: Style;
   /** Visual only: no collision. */
   ghost?: boolean;
+  /** Draw it shorter than its collider (invisible upper wall keeps the player in). */
+  visualH?: number;
 }
 
 interface EntityBase {

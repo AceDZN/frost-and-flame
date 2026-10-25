@@ -193,7 +193,10 @@ export function transferMass(a: Body, b: Body, phase: Phase, dm: number): number
   const h = hOf(a.mat, a.T, phase);
   a.mass -= m;
   a.H -= m * h;
-  if (a.mass < 1e-9) {
+  if (a.mass < 1e-4) {
+    // the last crumbs go too, so no body is left with a meaningless sliver
+    b.mass += a.mass;
+    b.H += a.H;
     a.mass = 0;
     a.H = 0;
   }
