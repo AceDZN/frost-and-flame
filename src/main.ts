@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { Game, NO_INPUT, type Input } from './game/game';
 import { LEVELS } from './game/levels';
 import { createWorld } from './render/world';
-import { LevelView } from './render/levelView';
+import { LevelView, stretch } from './render/levelView';
 import { Explorer } from './render/explorer';
 import { Models, modelUrl } from './render/models';
 import { Hud, fmtMJ } from './ui/hud';
@@ -456,7 +456,14 @@ function syncExplorer(dt: number) {
   );
 }
 
+// a soft continuous beam under the spark stream
+const beamMat = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.11, 1, 10, 1, true), beamMat);
+beam.visible = false;
+world.scene.add(beam);
+
 function gloveFx() {
+  beam.visible = false;
   if (!game || !view || !game.glove || !game.target) {
     sfx.glove(null, 0, false);
     return;
@@ -469,6 +476,10 @@ function gloveFx() {
   const active = Math.abs(game.gloveFlow) > 1 || !!blocked;
   sfx.glove(game.glove, strength, !!blocked || !active);
   if (!active) return;
+  beam.visible = true;
+  beamMat.color.setHex(game.glove === 'heat' ? 0xff8a2a : 0x5cc8ff);
+  beamMat.opacity = 0.25 + strength * 0.35 + Math.sin(clock * 30) * 0.05;
+  stretch(beam, hand, target);
   const n = 4;
   for (let i = 0; i < n; i++) {
     const jitter = new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5);
