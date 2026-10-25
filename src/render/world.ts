@@ -70,8 +70,8 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   sky.renderOrder = -10;
   scene.add(sky);
 
-  scene.add(new THREE.HemisphereLight(0x9fa8ff, 0x2a2440, 0.85));
-  const sun = new THREE.DirectionalLight(0xffb37a, 2.6);
+  scene.add(new THREE.HemisphereLight(0xa9b4ff, 0x3a2f55, 1.05));
+  const sun = new THREE.DirectionalLight(0xffae6e, 3.1);
   sun.position.copy(sunDir).multiplyScalar(40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);

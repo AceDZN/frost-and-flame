@@ -363,8 +363,9 @@ export class Hud {
       const p = project(lensTarget.ent.id);
       const W = this.el.clientWidth;
       const H = this.el.clientHeight;
-      const lx = p ? Math.min(W - 200, Math.max(200, p.x)) : W / 2;
-      const ly = p ? Math.min(H - 200, Math.max(200, p.y - 60)) : H / 2;
+      const half = Math.min(240, W * 0.4, H * 0.34);
+      const lx = p ? Math.min(W - half, Math.max(half, p.x + (W > 700 ? W * 0.12 : 0))) : W / 2;
+      const ly = p ? Math.min(H - half - 40, Math.max(half + 30, p.y - 60)) : H / 2;
       this.lensWrap.hidden = false;
       this.lensWrap.style.left = `${lx}px`;
       this.lensWrap.style.top = `${ly}px`;

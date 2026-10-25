@@ -387,8 +387,8 @@ body {
 /* lens */
 .lens {
   position: absolute;
-  width: min(360px, 62vmin);
-  height: min(360px, 62vmin);
+  width: min(460px, 64vmin);
+  height: min(460px, 64vmin);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
