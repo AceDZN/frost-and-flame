@@ -229,7 +229,12 @@ export class Hud {
     this.playLayer.style.display = on ? '' : 'none';
   }
 
+  private recent = new Map<string, number>();
+
   toast(text: string, kind: '' | 'heat' | 'cold' = '', ms = 2400) {
+    const now = performance.now();
+    if ((this.recent.get(text) ?? -1e9) > now - 4000) return;
+    this.recent.set(text, now);
     const t = document.createElement('div');
     t.className = `toast brass-frame ${kind}`;
     t.textContent = text;
@@ -317,13 +322,15 @@ export class Hud {
       const dom = (Object.keys(st.frac) as Phase[]).reduce((a, k) => (st.frac[k] > st.frac[a] ? k : a), 'solid' as Phase);
       const mat = MATERIALS[b.mat];
       this.gPhase.innerHTML = `<span>${PHASE_ICON[dom]} ${PHASE_HE[dom]}</span><small>${mat.phaseNameHe[dom] ?? mat.nameHe} · ${Math.round(b.mass)} ק״ג</small>`;
-      if (st.changing) {
+      const ch = g.changeOf(bodyId);
+      if (ch) {
         this.gauge.classList.add('changing');
         // while energy is leaving, the same plateau runs the other way (freezing, condensing)
         const down = (g.lastDir.get(bodyId) ?? this.dir.get(bodyId)) === 'down';
-        const from = down ? st.changing.to : st.changing.from;
-        const to = down ? st.changing.from : st.changing.to;
-        const p = down ? 1 - st.changing.progress : st.changing.progress;
+        const wall = ch !== st.changing;
+        const from = down && !wall ? ch.to : ch.from;
+        const to = down && !wall ? ch.from : ch.to;
+        const p = down && !wall ? 1 - ch.progress : ch.progress;
         const key = `${from}>${to}`;
         this.gRing.innerHTML = ringSvg(p, down ? '#5cc8ff' : '#ff8a2a') + `<div class="txt"><span>${CHANGE_HE[key] ?? ''}…<b class="ltr">${Math.floor(p * 100)}%</b></span></div>`;
       } else this.gauge.classList.remove('changing');

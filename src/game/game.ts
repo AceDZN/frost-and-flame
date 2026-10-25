@@ -103,6 +103,7 @@ export class Game {
   private emptyWarned = false;
   private fullWarned = false;
   private plungerLast = new Map<string, string>();
+  private plungerReported = new Map<string, string>();
 
   constructor(def: LevelDef, retry = 0) {
     this.def = def;
@@ -206,6 +207,23 @@ export class Game {
     }
   }
 
+  /**
+   * The phase change shown for a body. Walls of ice shed their melt water at once, so
+   * their own enthalpy keeps landing back on the start of the plateau: for them the
+   * progress is how much of the original block is gone, while it sits at its melting point.
+   */
+  changeOf(bodyId: string): { from: Phase; to: Phase; progress: number } | null {
+    const b = this.body(bodyId);
+    const st = b.state;
+    const wall = this.def.entities.find((e) => e.kind === 'ice' && e.body === bodyId);
+    if (wall && wall.kind === 'ice') {
+      const tr = b.material.transitions[0];
+      const left = this.solidLeft(bodyId);
+      if (tr && Math.abs(st.T - tr.at) < 1e-6 && left < 0.999 && left > 0) return { from: 'solid', to: tr.to, progress: 1 - left };
+    }
+    return st.changing;
+  }
+
   /** Fraction of the original solid still there (for walls that melt). */
   solidLeft(bodyId: string): number {
     const b = this.body(bodyId);
@@ -298,7 +316,9 @@ export class Game {
     const key = pressed ? res : 'up';
     if (key !== this.plungerLast.get(e.id)) {
       this.plungerLast.set(e.id, key);
-      if (pressed) {
+      // report a press once per result (stepping on and off again is not news)
+      if (pressed && this.plungerReported.get(e.id) !== res) {
+        this.plungerReported.set(e.id, res);
         this.events.push({ type: 'plunger', id: e.id, result: res });
         this.logLearn(`plunger-${res}`, e.id);
       }
@@ -623,7 +643,8 @@ export class Game {
     }
     const power = GLOVE_POWER * Math.min(1, 0.35 + (0.65 * this.gloveHold) / GLOVE_RAMP);
     const body = this.body(this.bodyOf(e)!);
-    const moved = this.battery.apply(body, mode, power, dt);
+    // the cold glove pumps heat out of things only while they are warmer than the air around them
+    const moved = this.battery.apply(body, mode, power, dt, this.def.airT);
     if (moved !== 0) this.lastDir.set(body.id, moved > 0 ? 'up' : 'down');
     this.gloveFlow = moved / dt;
     if (mode === 'heat' && this.battery.energy <= 1 && !this.emptyWarned) {

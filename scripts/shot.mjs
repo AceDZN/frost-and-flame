@@ -32,6 +32,28 @@ for (const s of steps) {
     if (!s.keep) for (const k of s.hold) await page.keyboard.up(k);
   }
   if (s.release) for (const k of s.release) await page.keyboard.up(k);
+  if (s.goto) {
+    // steer with real WASD presses (camera looks toward −z: W = −z, D = +x)
+    const [tx, tz] = s.goto;
+    const down = new Set();
+    for (let i = 0; i < (s.max ?? 120); i++) {
+      const st = JSON.parse(await page.evaluate(() => window.render_game_to_text()));
+      const dx = tx - st.player.pos.x;
+      const dz = tz - st.player.pos.z;
+      if (Math.hypot(dx, dz) < (s.tol ?? 0.35) || st.won) break;
+      const want = new Set();
+      if (dz < -0.15) want.add('KeyW');
+      if (dz > 0.15) want.add('KeyS');
+      if (dx > 0.15) want.add('KeyD');
+      if (dx < -0.15) want.add('KeyA');
+      if (s.jump) want.add('Space');
+      for (const k of down) if (!want.has(k)) { await page.keyboard.up(k); down.delete(k); }
+      for (const k of want) if (!down.has(k)) { await page.keyboard.down(k); down.add(k); }
+      await adv(50);
+    }
+    for (const k of down) await page.keyboard.up(k);
+    await adv(100);
+  }
   if (s.advance) {
     const n = Math.round(s.advance / 100);
     for (let i = 0; i < n; i++) await adv(100);

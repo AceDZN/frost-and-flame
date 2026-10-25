@@ -394,9 +394,9 @@ function updateCamera(dt: number) {
   const yaw = game.def.cameraYaw ?? 0;
   const back = new THREE.Vector3(-Math.sin(yaw), 0, Math.cos(yaw));
   const aspect = canvas.clientWidth / Math.max(1, canvas.clientHeight);
-  const dist = aspect < 0.8 ? 9.5 : 7.4;
-  const desired = tmp.set(p.x, p.y + (aspect < 0.8 ? 6.6 : 5.4), p.z).addScaledVector(back, dist);
-  const look = tmp2.set(p.x, p.y + 0.9, p.z).addScaledVector(back, -3.2);
+  const dist = aspect < 0.8 ? 8.2 : 7.2;
+  const desired = tmp.set(p.x, p.y + (aspect < 0.8 ? 5.4 : 4.3), p.z).addScaledVector(back, dist);
+  const look = tmp2.set(p.x, p.y + 1.3, p.z).addScaledVector(back, -3.2);
   // lean toward the current target so the action stays framed
   if (game.target) {
     const a = anchorVec(game.target);

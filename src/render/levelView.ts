@@ -35,6 +35,13 @@ function rockGeometry(w: number, h: number, d: number, amp = 0.12): THREE.Buffer
   return g;
 }
 
+/** Tile a box's texture by its size instead of stretching one copy over each face. */
+function tileUV(g: THREE.BufferGeometry, k: number) {
+  const uv = g.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * k, uv.getY(i) * k);
+  return g;
+}
+
 /** Thin cylinder between two points (pipes, ropes, beams). */
 export function stretch(mesh: THREE.Object3D, a: THREE.Vector3, b: THREE.Vector3) {
   const len = a.distanceTo(b);
@@ -137,7 +144,7 @@ export class LevelView {
     if (s.visualH !== undefined) s = { ...s, h: s.visualH };
     const big = s.w * s.d > 6 || s.h > 2;
     const mat = s.style === 'stone' ? M.stone : M.basalt;
-    const geo = rockGeometry(s.w, s.h, s.d, s.style === 'stone' ? 0.03 : big ? 0.16 : 0.06);
+    const geo = tileUV(rockGeometry(s.w, s.h, s.d, s.style === 'stone' ? 0.03 : big ? 0.16 : 0.06), Math.max(1, Math.max(s.w, s.h, s.d) / 2.5));
     const m = new THREE.Mesh(geo, mat);
     m.position.set(s.x, s.y + s.h / 2, s.z);
     if (s.y + s.h > 0.8) this.occluders.push(m);
@@ -145,7 +152,7 @@ export class LevelView {
     m.receiveShadow = true;
     this.root.add(m);
     if (s.style === 'snow' || (s.style === 'basalt' && s.w * s.d > 0.5)) {
-      const cap = new THREE.Mesh(new THREE.BoxGeometry(s.w + 0.04, 0.12, s.d + 0.04), M.snow);
+      const cap = new THREE.Mesh(tileUV(new THREE.BoxGeometry(s.w + 0.04, 0.12, s.d + 0.04), Math.max(1, Math.max(s.w, s.d) / 3)), M.snow);
       cap.position.set(s.x, s.y + s.h + 0.04, s.z);
       cap.receiveShadow = true;
       this.root.add(cap);
@@ -169,7 +176,7 @@ export class LevelView {
       roughness: tint === 'white' || tint === 'dry' ? 0.85 : 0.08,
       metalness: 0,
       transparent: tint !== 'white' && tint !== 'dry',
-      opacity: 0.86,
+      opacity: tint === 'clear' ? 0.62 : 0.86,
       clearcoat: tint === 'white' || tint === 'dry' ? 0 : 1,
       emissive: tint === 'dry' ? 0x223344 : 0x2b6c9a,
       emissiveMap: this.crack,
@@ -197,6 +204,28 @@ export class LevelView {
             icicles.add(c);
           }
           this.root.add(icicles);
+        }
+        if (e.box.h > 1.4 && e.tint !== 'dry') {
+          // a brass frame makes a wall of ice read as a door
+          const fr = new THREE.Group();
+          const post = (x: number) => {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, e.box.h + 0.1, e.box.d + 0.2), M.brass);
+            m.position.set(x, e.box.h / 2, 0);
+            m.castShadow = true;
+            fr.add(m);
+          };
+          post(-e.box.w / 2 - 0.08);
+          post(e.box.w / 2 + 0.08);
+          const top = new THREE.Mesh(new THREE.BoxGeometry(e.box.w + 0.32, 0.16, e.box.d + 0.2), M.brass);
+          top.position.y = e.box.h + 0.05;
+          fr.add(top);
+          for (const x of [-e.box.w / 2 - 0.08, e.box.w / 2 + 0.08]) {
+            const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshStandardMaterial({ color: 0xffd38a, emissive: 0xffa040, emissiveIntensity: 3 }));
+            lamp.position.set(x, e.box.h + 0.25, e.box.d / 2 + 0.12);
+            fr.add(lamp);
+          }
+          fr.position.set(e.box.x, e.box.y, e.box.z);
+          this.root.add(fr);
         }
         const a = this.anchorObj(e.id);
         let prevF = 1;
@@ -872,8 +901,8 @@ export class LevelView {
     this.root.add(name);
     const tower = this.models.get('thermo-lift');
     if (tower) {
-      tower.scale.setScalar(e.height + 1.2);
-      tower.position.set(e.x + (e.x < 0 ? -1.4 : 1.4), e.baseY, e.z + 0.4);
+      tower.scale.setScalar(3.4);
+      tower.position.set(e.x + (e.x < 0 ? -1.5 : 1.5), e.baseY, e.z - 0.55);
       this.root.add(tower);
     }
     const anchor = this.anchorObj(e.id);

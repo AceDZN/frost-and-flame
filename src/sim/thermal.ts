@@ -291,7 +291,7 @@ export class HeatBattery {
   ) {}
 
   /** Applies a glove for dt seconds. Returns the energy that actually moved (kJ, + into body). */
-  apply(body: Body, mode: 'heat' | 'cold', power: number, dt: number): number {
+  apply(body: Body, mode: 'heat' | 'cold', power: number, dt: number, floorT = -Infinity): number {
     if (body.mass <= 0) return 0;
     if (mode === 'heat') {
       const room = Math.max(0, body.energyTo(body.maxT));
@@ -301,7 +301,7 @@ export class HeatBattery {
       this.energy -= Q;
       return Q;
     }
-    const avail = Math.max(0, -body.energyTo(body.minT));
+    const avail = Math.max(0, -body.energyTo(Math.max(body.minT, floorT)));
     const Q = Math.min(power * dt, this.capacity - this.energy, avail);
     if (Q <= 0) return 0;
     body.addHeat(-Q);

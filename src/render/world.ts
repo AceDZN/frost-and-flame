@@ -92,8 +92,8 @@ export function createWorld(canvas: HTMLCanvasElement): World {
   const rockTex = rockTexture();
   const snowTex = snowTexture();
   const mats: Record<string, THREE.Material> = {
-    basalt: new THREE.MeshStandardMaterial({ color: 0x55525e, map: rockTex, roughness: 0.82, metalness: 0.05, flatShading: true }),
-    snow: new THREE.MeshStandardMaterial({ color: 0xf2f6ff, map: snowTex, roughness: 0.75 }),
+    basalt: new THREE.MeshStandardMaterial({ color: 0x6a6676, map: rockTex, roughness: 0.55, metalness: 0.1, flatShading: true }),
+    snow: new THREE.MeshStandardMaterial({ color: 0xdfe8f6, map: snowTex, roughness: 0.62, metalness: 0.02 }),
     stone: new THREE.MeshStandardMaterial({ color: 0x7a7280, map: rockTex, roughness: 0.8, flatShading: true }),
     brass: new THREE.MeshStandardMaterial({ color: 0xd9a548, metalness: 0.92, roughness: 0.32 }),
     copper: new THREE.MeshStandardMaterial({ color: 0xc8703f, metalness: 0.9, roughness: 0.3 }),

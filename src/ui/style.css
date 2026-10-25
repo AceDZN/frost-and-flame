@@ -731,3 +731,121 @@ body {
 [hidden] {
   display: none !important;
 }
+
+.gauge .readout,
+.gauge .phase span,
+.gauge .phase small {
+  white-space: nowrap;
+}
+
+/* phones in portrait */
+@media (max-width: 560px) {
+  .top-left {
+    top: max(8px, env(safe-area-inset-top));
+    left: 8px;
+    gap: 6px;
+  }
+  .round-btn {
+    width: 38px;
+    height: 38px;
+    border-width: 2px;
+  }
+  .round-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  .top-right {
+    top: max(52px, env(safe-area-inset-top));
+    right: 8px;
+    gap: 4px;
+  }
+  .plaque {
+    font-size: 15px;
+    padding: 4px 14px;
+  }
+  .objective {
+    font-size: 12px;
+    padding: 3px 10px;
+    max-width: 50vw;
+  }
+  .is-touch .battery {
+    top: 64px;
+    left: 8px;
+    width: 42vw;
+    padding: 16px 8px 6px;
+  }
+  .battery .bar {
+    height: 20px;
+  }
+  .battery .value {
+    font-size: 14px;
+  }
+  .battery .label {
+    font-size: 12px;
+    top: -12px;
+  }
+  .battery .delta {
+    top: auto;
+    bottom: -24px;
+    font-size: 14px;
+  }
+  .stick {
+    left: 12px;
+    width: 116px;
+    height: 116px;
+  }
+  .stick .nub {
+    width: 50px;
+    height: 50px;
+    margin: -25px 0 0 -25px;
+  }
+  .actions {
+    right: 10px;
+    display: grid;
+    grid-template-columns: 64px 64px;
+    gap: 8px;
+  }
+  .act {
+    width: 64px;
+    height: 64px;
+    font-size: 28px;
+  }
+  .act.lens-btn {
+    display: none;
+  }
+  .gauge .readout {
+    font-size: 15px;
+    min-width: 60px;
+    padding: 4px 8px;
+  }
+  .gauge .phase {
+    font-size: 13px;
+    padding: 3px 6px;
+  }
+  .gauge .thermo {
+    transform: scale(0.75);
+  }
+  .gauge .ring {
+    transform: scale(0.8);
+  }
+  .hint .key {
+    min-width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+  .hint .text {
+    font-size: 13px;
+    max-width: 200px;
+  }
+  .toast {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+  .toast-wrap {
+    top: 118px;
+  }
+  .lens {
+    width: 78vw;
+    height: 78vw;
+  }
+}

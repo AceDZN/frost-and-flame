@@ -397,3 +397,24 @@ describe('every level', () => {
     expect(waterMass(b.g)).toBeCloseTo(m0, 5);
   });
 });
+
+describe('regressions', () => {
+  it('the cold glove cannot farm energy from things already at air temperature (L6 glacier)', () => {
+    const b = new Bot('observatory');
+    b.goto(0, 5.4);
+    b.face(0, 4);
+    const e0 = b.g.battery.energy;
+    b.hold('cold', () => false, 3);
+    expect(b.g.battery.energy).toBeCloseTo(e0, 3);
+    expect(b.g.body('glacier').T).toBeCloseTo(-12, 6);
+  });
+
+  it('a heat glove that boils the basin dry does not jump to heating the balloon', () => {
+    const b = new Bot('steam');
+    b.goto(0.8, -2.8);
+    b.face(-2.2, -2.6);
+    b.hold('heat', () => false, 8);
+    expect(b.g.body('basin').mass).toBe(0);
+    expect(b.g.body('balloon').T).toBeLessThan(101); // not heated on toward 200 °C
+  });
+});
