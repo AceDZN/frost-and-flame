@@ -109,7 +109,7 @@ export class Lens {
           for (const q of h.pts) {
             const dx = q.hx - p.hx;
             const dy = q.hy - p.hy;
-            if ((dx > 1 && dx < 100 && Math.abs(dy) < 1) || (dy > 1 && dy < 100 && Math.abs(dx) < 1)) {
+            if ((dx > 1 && dx < 115 && Math.abs(dy) < 1) || (dy > 1 && dy < 115 && Math.abs(dx) < 1)) {
               ctx.beginPath();
               ctx.moveTo(p.x, p.y);
               ctx.lineTo(q.x, q.y);
