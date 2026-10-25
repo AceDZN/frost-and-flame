@@ -11,8 +11,12 @@
 - Fixes found by playing in the real renderer: overlays ignoring `[hidden]`; false "sublimation" toast from a near-empty body; freezing shown as "melting"; walls hiding the explorer; heat glove re-targeting the balloon after boiling dry; **cold glove farming ~400 MJ from the already-frozen glacier** (now: the cold glove only cools things down to the air temperature); melting walls never showing their 0 °C plateau ring; phone-width layout.
 - **Ports:** 5202 turned out to be held by another project's dev server (`clockwork-alibi`). The lead session assigned this game **5232 (dev) / 4232 (preview)** for good.
 
+- **Independent science review** (`docs/SCIENCE_REVIEW.md`): model and budgets confirmed; 2 bypasses (jumpable creek, way around the L6 glass) and 24 smaller findings — all fixed or accepted, with tests (resolution table in the review).
+- **Fresh-eyes playtest**: finished all 6 levels; top confusions (camera inside objects, unclear targeting, text pile-up, missing feedback, wording) fixed — see `PLAYTEST.md`.
+- Final real-key run in the browser: all six levels won, zero console errors. 50 tests pass.
+
 ## Open / next
 
-- Independent science review → `docs/SCIENCE_REVIEW.md` (in progress).
-- Fresh-eyes playtest → `PLAYTEST.md` (in progress).
-- Visual review against the mockups → `docs/VISUAL_REVIEW.md`.
+- Real students on real devices (fun and learning are unproven).
+- Low-end GPU / phone performance check.
+- Optional: richer set dressing to get closer to the painterly mockups; voice-over.

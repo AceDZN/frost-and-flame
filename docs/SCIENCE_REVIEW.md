@@ -178,3 +178,27 @@ Basins draw ice at 917 and water at 1000 kg/m³, and the expansion on freezing i
 - **L3's energy ledger including the sun mirror** (there is no accumulator for mirror input). I confirmed only that the white latch never melts and the dark route works.
 - **Workbook pages beyond the saved snapshots** (e.g. the live quiz items). Terminology checks used only `docs/curriculum/*.md`.
 - **Whether `CURRICULUM.md`'s per-level claims hold in the rendered game for every claim** (e.g. "the wooden rod's near end smokes at 180 °C"). I verified the numbers in the model, not the visuals.
+
+## Resolution (crew lead, 26 Oct 2026)
+
+| # | Status | What changed |
+|---|---|---|
+| 1 | Fixed | Both creeks are 5.0 m wide (900 kg top layer). A run-jump sweep test from every take-off point, including past the edge, finds no landing; the same test fails on the old 4.2 m layout. |
+| 2 | Fixed | `glassWall(z, gateW, top, half)`; level 6 uses half = 6. Test: the dome is sealed while the latch is frozen. |
+| 3 | Fixed | The lens shows the conserved total: for walls `🔒 סה״כ 1063 ק״ג · קרח … + מים שזרמו …`, for drain-linked water `🔒 כל המים במערכת 150 ק״ג · כאן …`. The gauge shows the amount here without a lock. |
+| 4 | Fixed | The lens uses `changeOf()`; a melting wall shows a split lattice/liquid picture whose divider follows the fractions. |
+| 5 | Fixed | Energy direction is tracked from heating/cooling only (mass transfers subtracted). Bodies that only received mass this step emit no phase events. A backward finish needs energy to have really left. Test: boiling never announces condensation. |
+| 6 | Fixed | Toast "…לגז שקוף…"; the L4 takeaway explains the white fog is water droplets and the CO₂ itself is transparent. |
+| 7 | Fixed | One-time notice when the cold glove targets something at air temperature; the battery-empty toast says "חם יותר מהאוויר". |
+| 8 | Fixed | The glove needs line of sight. Rock, other ice walls and closed gates block it (targets behind rock are not offered at all); glass and gates are still targetable to teach the rule. Toast: "הכפפה צריכה קו ישיר…". Test: no creek target through the ice door. |
+| 9, 10 | Fixed | חום סגולי; הקפאה (ring and L1 concept); CURRICULUM.md term list. |
+| 11–17 | Fixed | Wording as proposed (melting toast without gendered label, title line, "כמעט לא נדחסים", "נטענה", "הסידור והמרחקים", pipe-ice wording, "פי 9 בעליית הטמפרטורה"). Slush still pushes at ≥ 50 % liquid (unchanged; stated here). |
+| 18 | Fixed | Temperatures show one decimal below 100 (−78.5 °C). |
+| 19 | Fixed | The L2 tank loses heat slowly to the air; "the steam balloon is insulated" added to CURRICULUM.md. |
+| 20 | Fixed | Rods use `conductance(MATERIALS[mat].k, …)` and material density (test). Tuned contact/loss values are listed in CURRICULUM.md (the plate link is now 3000 kJ/(s·°C) so condensing takes ~4 s). |
+| 21 | Fixed | Title card: "כל כפפה מעבירה עד 100 MJ בשנייה". L3 takeaway states real conduction times (copper ~a day, wood ~years). |
+| 22 | Fixed | L3 iron and wooden benches at the same −8 °C, with a toast explaining that metal only conducts heat from the hand faster. |
+| 23 | Fixed | Gas chip icon is a neutral ◌. |
+| 24 | Accepted | Recovering the balloon's steam energy to afford the water lift is honest; CURRICULUM.md now calls the iron lift "the cheap choice". |
+| 25 | Fixed | The water-ice lattice is drawn more open than the liquid. |
+| 26 | Fixed | The air pipe can't be heated (maxT = air temperature). |
