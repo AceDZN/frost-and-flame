@@ -325,6 +325,7 @@ body {
 .hint .text {
   padding: 6px 12px;
   font-size: 16px;
+  width: max-content;
   max-width: 280px;
   text-align: center;
 }
@@ -848,4 +849,14 @@ body {
     width: 78vw;
     height: 78vw;
   }
+}
+
+.why summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--brass-light);
+  pointer-events: auto;
+}
+.why p {
+  font-size: 16px;
 }

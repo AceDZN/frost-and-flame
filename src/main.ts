@@ -199,7 +199,7 @@ function showWin() {
       <h2>${last ? 'הגעתם אל הטלסקופ!' : 'הגעתם למגדלור!'}</h2>
       <div class="stars">${starHtml}</div>
       <div class="star-notes">★ סיום · ${g.splashes === 0 ? '★' : '☆'} בלי ליפול למים · ${g.battery.energy >= g.def.efficientAt ? '★' : '☆'} חיסכון: נשארו <span class="ltr">${fmtMJ(g.battery.energy)}</span></div>
-      <p>${g.def.takeawayHe}</p>
+      ${takeawayHtml(g.def.takeawayHe)}
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         ${last ? '<button class="big-btn" id="menu">לכל השלבים</button>' : '<button class="big-btn" id="next">לשלב הבא</button>'}
         <button class="big-btn secondary" id="again">שוב</button>
@@ -208,6 +208,13 @@ function showWin() {
     screen.querySelector('#menu')?.addEventListener('click', () => showTitle());
     screen.querySelector('#again')!.addEventListener('click', () => restart());
   }, 1400);
+}
+
+/** First sentence up front, the rest behind a "why?" toggle, so the win card stays short. */
+function takeawayHtml(t: string) {
+  const i = t.search(/[.!?](\s|$)/);
+  if (i < 0 || i > t.length - 4) return `<p>${t}</p>`;
+  return `<p><b>${t.slice(0, i + 1)}</b></p><details class="why"><summary>למה?</summary><p>${t.slice(i + 1).trim()}</p></details>`;
 }
 
 function persistLog() {
@@ -248,7 +255,6 @@ function startLevel(i: number) {
   screen.hidden = true;
   hud.show(true);
   input.clear();
-  hud.toast(`${LEVELS[i].nameHe} — ${LEVELS[i].conceptHe}`, '', 2600);
 }
 
 function restart() {
@@ -300,7 +306,7 @@ function handleEvents() {
           hud.toast('האדים התעבו בחזרה למים', 'cold');
         } else if (k === 'solid>gas') {
           sfx.whoosh();
-          hud.toast('המראה! הקרח היבש הפך ישר לגז שקוף — בלי שלולית', 'heat', 3200);
+          hud.toast('מעבר ישיר ממוצק לגז (המראה): הקרח היבש הפך לגז שקוף — בלי שלולית', 'heat', 3400);
         }
         break;
       }
@@ -363,6 +369,15 @@ function handleEvents() {
         hud.toast(`${ent?.labelHe ?? ''}: כבר קר כמו האוויר — הכפפה שואבת חום רק מדברים חמים מהאוויר`, 'cold', 3200);
         break;
       }
+      case 'noTarget':
+        hud.toast('אין כאן מה לחמם או לקרר — פנו אל חפץ קרוב (הוא יקבל טבעת זוהרת)', '', 2600);
+        break;
+      case 'aim':
+        hud.toast(ev.absorb < 0.2 ? 'השלג הלבן מחזיר כמעט את כל אור השמש — הוא כמעט לא מתחמם' : 'האבן הכהה בולעת את אור השמש ומתחממת', '', 3200);
+        break;
+      case 'batteryLow':
+        hud.toast('נשאר רבע סוללה — האם זה החפץ הנכון לחמם?', 'heat', 2800);
+        break;
       case 'bench':
         hud.toast('שני הספסלים באותה טמפרטורה! ברזל רק מוליך חום מהיד מהר יותר — ולכן מרגיש קר יותר', '', 3800);
         break;
@@ -410,17 +425,23 @@ function updateCamera(dt: number) {
     const a = anchorVec(game.target);
     if (a) look.lerp(a, game.glove ? 0.35 : 0.15);
   }
-  // rise over walls rather than hide the explorer behind them
+  // rise over walls rather than hide the explorer behind them; if that isn't enough, come closer
   if (view && view.occluders.length) {
     const eye = new THREE.Vector3(p.x, p.y + 1.1, p.z);
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 5; i++) {
       const dir = tmp3.copy(desired).sub(eye);
       const len = dir.length();
       ray.set(eye, dir.normalize());
-      ray.far = len;
-      if (!ray.intersectObjects(view.occluders, false).length) break;
-      desired.y += 1.1;
-      desired.addScaledVector(back, -0.55);
+      ray.far = len + 0.4;
+      const hit = ray.intersectObjects(view.occluders, true)[0];
+      if (!hit) break;
+      if (i < 3) {
+        desired.y += 1.1;
+        desired.addScaledVector(back, -0.55);
+      } else {
+        desired.copy(eye).addScaledVector(dir, Math.max(1.4, hit.distance - 0.5));
+        break;
+      }
     }
   }
   const k = 1 - Math.exp(-dt * 5);
@@ -464,6 +485,26 @@ function syncExplorer(dt: number) {
   );
 }
 
+// a glowing ring marks what the gloves will act on
+const ringTex = (() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d')!;
+  x.strokeStyle = '#fff';
+  x.lineWidth = 7;
+  x.shadowColor = '#fff';
+  x.shadowBlur = 10;
+  x.beginPath();
+  x.arc(64, 64, 50, 0, Math.PI * 2);
+  x.stroke();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+const targetRing = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTex, transparent: true, depthTest: false, blending: THREE.AdditiveBlending }));
+targetRing.renderOrder = 9;
+world.scene.add(targetRing);
+
 // a soft continuous beam under the spark stream
 const beamMat = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
 const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.11, 1, 10, 1, true), beamMat);
@@ -472,6 +513,18 @@ world.scene.add(beam);
 
 function gloveFx() {
   beam.visible = false;
+  targetRing.visible = false;
+  if (game && game.target && mode === 'play') {
+    const a = anchorVec(game.target);
+    if (a) {
+      targetRing.visible = true;
+      targetRing.position.copy(a).add(new THREE.Vector3(0, -0.25, 0));
+      const k = 0.9 + Math.sin(clock * 6) * 0.08;
+      targetRing.scale.setScalar(k * (game.glove ? 1.25 : 1));
+      (targetRing.material as THREE.SpriteMaterial).color.setHex(game.glove === 'heat' ? 0xff8a2a : game.glove === 'cold' ? 0x5cc8ff : 0xffe6a0);
+      (targetRing.material as THREE.SpriteMaterial).opacity = game.gloveBlocked ? 0.35 : 0.9;
+    }
+  }
   if (!game || !view || !game.glove || !game.target) {
     sfx.glove(null, 0, false);
     return;

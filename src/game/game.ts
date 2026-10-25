@@ -41,7 +41,10 @@ export type GameEvent =
   | { type: 'plunger'; id: string; result: 'squish' | 'push' | 'locked' }
   | { type: 'hint'; index: number }
   | { type: 'coldFloor'; id: string }
-  | { type: 'bench'; id: string };
+  | { type: 'bench'; id: string }
+  | { type: 'noTarget' }
+  | { type: 'aim'; target: string; absorb: number }
+  | { type: 'batteryLow' };
 
 export interface Collider {
   box: AABB;
@@ -103,6 +106,7 @@ export class Game {
   private heldPrev = { heat: false, cold: false, jump: false };
   private gateEvent = new Set<string>();
   private emptyWarned = false;
+  private lowWarned = false;
   private fullWarned = false;
   private plungerLast = new Map<string, string>();
   private plungerReported = new Map<string, string>();
@@ -296,6 +300,9 @@ export class Game {
             if (i >= 0) {
               this.mirrorAim.set(m.id, i);
               this.logLearn('aim-mirror', m.aims[i].target);
+              const te = this.def.entities.find((x) => x.id === m.aims[i].target);
+              const ab = te && 'absorb' in te && te.absorb !== undefined ? te.absorb : 0.5;
+              this.events.push({ type: 'aim', target: m.aims[i].target, absorb: ab });
             }
           }
         } else if (!pressed) this.buttonsDown.delete(e.id);
@@ -592,6 +599,36 @@ export class Game {
 
   // ---------------------------------------------------------------- gloves
 
+  /**
+   * What lies between the hand and an entity: 'glass' (a lesson: the glove can't pass it,
+   * sunlight can), 'solid' (rock, closed gates, other ice walls) or nothing.
+   */
+  lineBlock(e: EntityDef): { kind: 'glass' | 'solid'; at: V3 } | null {
+    const p = this.player;
+    const hand = { x: p.pos.x, y: p.pos.y + 1.0, z: p.pos.z };
+    const a = this.anchor(e);
+    let best: { kind: 'glass' | 'solid'; t: number } | null = null;
+    const test = (box: AABB, kind: 'glass' | 'solid') => {
+      const t = segmentHitsAABB(hand, a, box);
+      if (t !== null && (!best || t < best.t)) best = { kind, t };
+    };
+    for (const st of this.def.statics) {
+      if (st.ghost) continue;
+      if (st.style === 'glass') test(toAABB(st), 'glass');
+      else if (st.style === 'basalt' || st.style === 'snow' || st.style === 'dark') test(toAABB(st), 'solid');
+    }
+    for (const c of this.colliders) {
+      if (c.id === e.id) continue;
+      const x = this.def.entities.find((q) => q.id === c.id);
+      // a barred gate is see-through like glass: you can aim at what's behind it, but the glove is stopped
+      if (x && x.kind === 'gate') test(c.box, 'glass');
+      if (x && x.kind === 'ice') test(c.box, 'solid');
+    }
+    if (!best) return null;
+    const b = best as { kind: 'glass' | 'solid'; t: number };
+    return { kind: b.kind, at: { x: hand.x + (a.x - hand.x) * b.t, y: hand.y + (a.y - hand.y) * b.t, z: hand.z + (a.z - hand.z) * b.t } };
+  }
+
   candidates(): { id: string; score: number }[] {
     const p = this.player;
     const hand = { x: p.pos.x, y: p.pos.y + 1.0, z: p.pos.z };
@@ -603,18 +640,44 @@ export class Game {
       const b = this.bodyOf(e);
       if (!b || this.body(b).mass <= 1e-6) continue;
       if (e.kind === 'ice' && this.solidLeft(e.body) <= 0.02) continue;
+      // the condenser is worked from the ledge, not from the balloon that would sink under you
+      if (e.kind === 'plate' && e.role === 'condenser' && this.player.groundId && this.def.entities.some((x) => x.kind === 'balloon' && x.id === this.player.groundId)) continue;
       const a = this.anchor(e);
       const d = dist(hand, a);
       if (d > RANGE) continue;
       const h = Math.hypot(a.x - hand.x, a.z - hand.z) || 1;
       const dot = ((a.x - hand.x) * fx + (a.z - hand.z) * fz) / h;
-      if (dot < -0.1 && d > 2.2) continue;
+      if (dot < -0.1 && d > 4.5) continue;
       if (e.kind === 'balloon' && this.body(e.body).massOf('gas') < 1) continue;
+      // never offer something the glove can't reach through rock or a closed door
+      const blk = this.lineBlock(e);
+      if (blk?.kind === 'solid') continue;
       // standing on a lift you mean its tank; standing on a balloon you mean the basin
       const own = this.player.groundId !== e.id ? 1 : e.kind === 'lift' ? 0.3 : e.kind === 'balloon' ? 3 : 1;
-      out.push({ id: e.id, score: d * (1.7 - dot) * own });
+      const glass = blk?.kind === 'glass' ? 2.2 : 1;
+      const high = Math.abs(a.y - hand.y) > 2.2 && this.player.groundId !== e.id ? 1.6 : 1;
+      // the object the on-screen hint points at wins ties, so "hold E" works on what it shows
+      const hinted = this.visibleHint?.target === e.id ? 0.45 : 1;
+      out.push({ id: e.id, score: d * (1.7 - dot) * own * glass * high * hinted });
     }
     return out.sort((a, b) => a.score - b.score);
+  }
+
+  /** The highlighted target while no glove is held: sticky, so a small step doesn't flip it. */
+  private pickIdleTarget(): string | null {
+    const c = this.candidates();
+    if (!c.length) return null;
+    const cur = c.find((x) => x.id === this.target);
+    if (cur && c[0].id !== cur.id && c[0].score > cur.score * 0.85) {
+      // stay on the current target only while it is still roughly in front of the explorer
+      const e = this.def.entities.find((x) => x.id === cur.id)!;
+      const a = this.anchor(e);
+      const p = this.player;
+      const h = Math.hypot(a.x - p.pos.x, a.z - p.pos.z) || 1;
+      const dot = ((a.x - p.pos.x) * Math.sin(p.yaw) - (a.z - p.pos.z) * Math.cos(p.yaw)) / h;
+      if (dot > 0.3 || h < 1.2) return cur.id;
+    }
+    return c[0].id;
   }
 
   private updateGloves(dt: number) {
@@ -626,12 +689,13 @@ export class Game {
       this.gloveHold = 0;
       this.gloveFlow = 0;
       this.gloveBlocked = null;
-      this.target = this.candidates()[0]?.id ?? null;
+      this.target = this.pickIdleTarget();
       return;
     }
     // pick a target when the button goes down; if it is used up mid-hold, the glove idles until released
     if (started) {
-      this.target = this.candidates()[0]?.id ?? null;
+      this.target = this.pickIdleTarget();
+      if (!this.target) this.events.push({ type: 'noTarget' });
       this.gloveHold = 0;
       if (this.target) this.logLearn(mode, this.target);
     }
@@ -654,20 +718,14 @@ export class Game {
     }
     // face the target while aiming
     p.yaw = Math.atan2(a.x - hand.x, -(a.z - hand.z));
-    // glass and closed gates block the glove's spark stream
-    // the glove needs a clear line: glass, rock walls, closed gates and other ice walls block it
-    const blockers = this.def.statics.filter((s) => !s.ghost && (s.style === 'glass' || s.style === 'basalt' || s.style === 'snow' || s.style === 'dark')).map((s) => toAABB(s));
-    for (const c of this.colliders) if (c.id !== e.id && this.def.entities.some((x) => x.id === c.id && (x.kind === 'gate' || x.kind === 'ice'))) blockers.push(c.box);
-    for (const box of blockers) {
-      const hit = segmentHitsAABB(hand, a, box);
-      if (hit !== null) {
-        this.gloveBlocked = { x: hand.x + (a.x - hand.x) * hit, y: hand.y + (a.y - hand.y) * hit, z: hand.z + (a.z - hand.z) * hit };
-        if (started) {
-          this.events.push({ type: 'glass', at: this.gloveBlocked });
-          this.logLearn('glass-blocked', e.id);
-        }
-        return;
+    const blk = this.lineBlock(e);
+    if (blk) {
+      this.gloveBlocked = blk.at;
+      if (started) {
+        this.events.push({ type: 'glass', at: blk.at });
+        this.logLearn(blk.kind === 'glass' ? 'glass-blocked' : 'wall-blocked', e.id);
       }
+      return;
     }
     const power = GLOVE_POWER * Math.min(1, 0.35 + (0.65 * this.gloveHold) / GLOVE_RAMP);
     const body = this.body(this.bodyOf(e)!);
@@ -686,6 +744,11 @@ export class Game {
       this.fullWarned = true;
       this.events.push({ type: 'battery', state: 'full' });
     }
+    if (mode === 'heat' && this.battery.energy < 0.25 * this.def.battery.start && !this.lowWarned && this.battery.energy > 1) {
+      this.lowWarned = true;
+      this.events.push({ type: 'batteryLow' });
+    }
+    if (this.battery.energy > 0.35 * this.def.battery.start) this.lowWarned = false;
     if (this.battery.energy > 2) this.emptyWarned = false;
     if (this.battery.energy < this.battery.capacity - 2) this.fullWarned = false;
   }

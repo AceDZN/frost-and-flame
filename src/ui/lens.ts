@@ -27,6 +27,8 @@ export interface LensInfo {
   T: number;
   /** The phases to show (one, or two while changing: [from, to]). */
   phases: Phase[];
+  /** Fraction of the mass still in the first phase (sets where the lens is divided). */
+  split?: number;
 }
 
 export class Lens {
@@ -35,6 +37,11 @@ export class Lens {
   private halves: { phase: Phase; pts: Pt[] }[] = [];
   private key = '';
   private size = 360;
+  private splitX = 0.5;
+  /** x where the two phases meet (the first phase is on the right, RTL). */
+  private get divider() {
+    return this.size * 2 * (1 - this.splitX);
+  }
 
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -47,8 +54,8 @@ export class Lens {
     const two = info.phases.length === 2;
     this.halves = info.phases.map((phase, i) => {
       // RTL: the first phase (the one being used up) sits on the right
-      const x0 = two ? (i === 0 ? S / 2 : 0) : 0;
-      const x1 = two ? (i === 0 ? S : S / 2) : S;
+      const x0 = two ? (i === 0 ? this.divider : 0) : 0;
+      const x1 = two ? (i === 0 ? S : this.divider) : S;
       const pts: Pt[] = [];
       if (phase === 'solid') {
         // ice is the less dense phase of water, so its lattice is drawn a little more open
@@ -56,14 +63,14 @@ export class Lens {
         for (let y = step / 2; y < S; y += step)
           for (let x = x0 + step / 2; x < x1; x += step) pts.push({ x, y, vx: 0, vy: 0, hx: x, hy: y });
       } else if (phase === 'liquid') {
-        const n = two ? 26 : 50;
+        const n = Math.max(6, Math.round(50 * (x1 - x0) / S));
         for (let k = 0; k < n; k++) {
           const x = x0 + 40 + Math.random() * (x1 - x0 - 80);
           const y = 40 + Math.random() * (S - 80);
           pts.push({ x, y, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, hx: x, hy: y });
         }
       } else {
-        const n = two ? 6 : 10;
+        const n = Math.max(2, Math.round(10 * (x1 - x0) / S));
         for (let k = 0; k < n; k++) {
           const x = x0 + 40 + Math.random() * (x1 - x0 - 80);
           const y = 40 + Math.random() * (S - 80);
@@ -76,7 +83,9 @@ export class Lens {
   }
 
   draw(info: LensInfo, dt: number) {
-    const key = `${info.mat}:${info.phases.join('>')}`;
+    const sp = Math.min(0.85, Math.max(0.15, info.split ?? 0.5));
+    this.splitX = Math.round(sp * 10) / 10;
+    const key = `${info.mat}:${info.phases.join('>')}:${this.splitX}`;
     if (key !== this.key) {
       this.key = key;
       this.build(info);
@@ -94,8 +103,8 @@ export class Lens {
     const R = 30;
     for (const h of this.halves) {
       const two = this.halves.length === 2;
-      const x0 = two ? (h === this.halves[0] ? S / 2 : 0) : 0;
-      const x1 = two ? (h === this.halves[0] ? S : S / 2) : S;
+      const x0 = two ? (h === this.halves[0] ? this.divider : 0) : 0;
+      const x1 = two ? (h === this.halves[0] ? S : this.divider) : S;
       if (h.phase === 'solid') {
         const amp = 4 + speed * 9;
         ctx.strokeStyle = 'rgba(120,200,255,0.45)';
@@ -178,7 +187,7 @@ export class Lens {
     }
     if (this.halves.length === 2) {
       ctx.fillStyle = '#d6aa52';
-      ctx.fillRect(S / 2 - 5, 0, 10, S);
+      ctx.fillRect(this.divider - 5, 0, 10, S);
     }
   }
 

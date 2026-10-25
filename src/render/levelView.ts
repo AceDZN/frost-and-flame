@@ -658,7 +658,8 @@ export class LevelView {
       ribs.visible = false;
       deck.children.forEach((c) => (c.visible = false));
       this.root.add(basketModel, envModel);
-    }
+      this.occluders.push(envModel);
+    } else this.occluders.push(env);
     const BASKET_S = e.platform.w / 0.42;
     const anchor = this.anchorObj(e.id);
     this.updaters.push((game, _dt, t) => {
@@ -919,6 +920,7 @@ export class LevelView {
     this.root.add(meltWater);
     const platMat = (M.brass as THREE.MeshStandardMaterial).clone();
     const plat = new THREE.Mesh(new THREE.CylinderGeometry(e.platform, e.platform, 0.25, 32), platMat);
+    this.occluders.push(plat);
     plat.castShadow = plat.receiveShadow = true;
     this.root.add(plat);
     const column = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1, 12), M.brass);
@@ -931,6 +933,7 @@ export class LevelView {
       tower.scale.setScalar(3.4);
       tower.position.set(e.x + (e.x < 0 ? -1.5 : 1.5), e.baseY, e.z - 0.55);
       this.root.add(tower);
+      this.occluders.push(tower);
     }
     const anchor = this.anchorObj(e.id);
     const c = new THREE.Color();
@@ -1082,6 +1085,7 @@ export class LevelView {
       obs.position.set(this.game.def.index === 6 ? ex.x : -14, this.game.def.index === 6 ? ex.y - 1 : 0.5, this.game.def.index === 6 ? ex.z - 7 : ex.z - 6);
       obs.rotation.y = this.game.def.index === 6 ? 0 : 0.6;
       this.root.add(obs);
+      this.occluders.push(obs);
     }
   }
 

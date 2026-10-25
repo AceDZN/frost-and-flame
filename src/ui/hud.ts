@@ -17,7 +17,7 @@ const CHANGE_HE: Record<string, string> = {
   'liquid>gas': 'רתיחה',
   'gas>liquid': 'עיבוי',
   'liquid>solid': 'הקפאה',
-  'solid>gas': 'המראה',
+  'solid>gas': 'מוצק→גז',
   'gas>solid': 'ריבוץ',
 };
 
@@ -110,7 +110,7 @@ export class Hud {
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> הליכה · <kbd>רווח</kbd> קפיצה</div>
         <div class="h"><kbd>E</kbd> / לחצן ימני — כפפת חום 🔥</div>
         <div class="c"><kbd>Q</kbd> / לחצן שמאלי — כפפת קור ❄️</div>
-        <div><kbd>F</kbd> עדשת חלקיקים · <kbd>R</kbd> מחדש</div>
+        <div><kbd>F</kbd> החזיקו — עדשת חלקיקים · <kbd>Tab</kbd> קבוע · <kbd>R</kbd> מחדש</div>
       </div>
       <div class="touch">
         <div class="stick"><div class="nub"></div></div>
@@ -230,6 +230,7 @@ export class Hud {
   }
 
   private recent = new Map<string, number>();
+  private toastLife = new Map<HTMLElement, number>();
 
   toast(text: string, kind: '' | 'heat' | 'cold' = '', ms = 2400) {
     const now = performance.now();
@@ -239,8 +240,9 @@ export class Hud {
     t.className = `toast brass-frame ${kind}`;
     t.textContent = text;
     this.toasts.appendChild(t);
-    while (this.toasts.children.length > 3) this.toasts.firstElementChild!.remove();
-    setTimeout(() => t.remove(), ms);
+    while (this.toasts.children.length > 2) this.toasts.firstElementChild!.remove();
+    // toasts live in game time (they pause with the game and follow advanceTime)
+    this.toastLife.set(t, ms / 1000);
   }
 
   flashBrr() {
@@ -275,6 +277,13 @@ export class Hud {
    * Per-frame update. `project` maps an anchor id to screen px (or null when off-screen).
    */
   update(g: Game, dt: number, project: (id: string) => { x: number; y: number } | null, lensOn: boolean) {
+    for (const [t, life] of this.toastLife) {
+      const l = life - dt;
+      if (l <= 0 || !t.isConnected) {
+        t.remove();
+        this.toastLife.delete(t);
+      } else this.toastLife.set(t, l);
+    }
     // battery
     const e = g.battery.energy;
     const frac = e / g.battery.capacity;
@@ -312,8 +321,10 @@ export class Hud {
       const b = g.body(bodyId);
       const st = b.state;
       this.gauge.hidden = false;
-      this.gauge.style.left = `${pos.x}px`;
-      this.gauge.style.top = `${pos.y}px`;
+      const GW = this.el.clientWidth;
+      const gHalf = Math.min(170, GW / 2 - 6);
+      this.gauge.style.left = `${Math.min(GW - gHalf, Math.max(gHalf, pos.x))}px`;
+      this.gauge.style.top = `${Math.max(150, pos.y)}px`;
       this.gauge.style.opacity = g.glove ? '1' : '0.8';
       const T = st.T;
       const level = Math.max(0, Math.min(1, (T + 40) / 200));
@@ -349,8 +360,12 @@ export class Hud {
       this.hint.hidden = false;
       // keep hint and gauge from overlapping: hint goes above the gauge when both target the same thing
       const lift = tid === h.target && !this.gauge.hidden ? 110 : 0;
-      this.hint.style.left = `${hp.x}px`;
-      this.hint.style.top = `${hp.y - lift}px`;
+      // keep the whole hint box on screen and clear of the top bar and the battery
+      const W = this.el.clientWidth;
+      const H = this.el.clientHeight;
+      const halfW = Math.min(150, W / 2 - 10);
+      this.hint.style.left = `${Math.min(W - halfW, Math.max(halfW, hp.x))}px`;
+      this.hint.style.top = `${Math.min(H - 130, Math.max(W < 560 ? 230 : 190, hp.y - lift))}px`;
     } else this.hint.hidden = true;
 
     // lens
@@ -361,7 +376,9 @@ export class Hud {
       const ch = g.changeOf(lensTarget.bodyId);
       const down = (g.lastDir.get(lensTarget.bodyId) ?? 'up') === 'down' && ch === st.changing;
       const phases: Phase[] = ch ? (down ? [ch.to, ch.from] : [ch.from, ch.to]) : [(Object.keys(st.frac) as Phase[]).reduce((a, k) => (st.frac[k] > st.frac[a] ? k : a), 'solid' as Phase)];
-      this.lens.draw({ mat: b.mat, T: st.T, phases }, dt);
+      // split the lens in proportion to how much of each phase there is
+      const split = ch ? (down ? ch.progress : 1 - ch.progress) : 1;
+      this.lens.draw({ mat: b.mat, T: st.T, phases, split }, dt);
       const p = project(lensTarget.ent.id);
       const W = this.el.clientWidth;
       const H = this.el.clientHeight;

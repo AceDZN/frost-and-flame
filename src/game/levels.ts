@@ -216,7 +216,7 @@ const level2: LevelDef = {
       done: (g) => g.balloonTop(g.entity<'balloon'>('balloon')) >= 4.45 || g.player.pos.y > 4.2,
     },
     { target: 'plate', glyph: 'cold', textHe: 'קררו את לוח הנחושת — האדים יתעבו למים', done: (g) => tankKg(g) >= L2fullKg - 5 },
-    { target: 'exit', glyph: 'go', textHe: 'השער פתוח!', done: never },
+    { target: 'exit', glyph: 'go', textHe: 'למגדלור!', done: never },
   ],
   takeawayHe:
     '150 ק״ג קרח הפכו ל־150 ק״ג מים, ל־150 ק״ג אדים (שתפסו בלון ענק!) ושוב ל־150 ק״ג מים. במעבר בין מצבי צבירה המסה לא משתנה — רק הסידור והמרחקים בין החלקיקים. האדים עצמם שקופים; הענן הלבן הוא טיפות זעירות.',
@@ -385,7 +385,7 @@ const level4: LevelDef = {
       skip: (g) => g.latched.has('gate'),
     },
     { target: 'plB', glyph: 'step', textHe: 'עכשיו עמדו על בוכנת המים', done: (g) => g.latched.has('gate') },
-    { target: 'exit', glyph: 'go', textHe: 'השער פתוח!', done: never },
+    { target: 'exit', glyph: 'go', textHe: 'למגדלור!', done: never },
   ],
   takeawayHe:
     'קרח יבש (CO₂) הופך ישר לגז שקוף — המראה, בלי שלב נוזל. הערפל הלבן הוא טיפות מים מהאוויר שהתקררו ליד הקרח היבש — הפחמן הדו־חמצני עצמו שקוף. גז נדחס: הבוכנה שוקעת וקופצת חזרה. נוזל כמעט לא נדחס, ולכן הדחיפה עוברת דרכו עד השער (הידראוליקה). מוצק לא נדחס וגם לא זורם — הקרח תקוע בצינור ונועל אותו.',
@@ -528,8 +528,10 @@ const level6: LevelDef = {
   exit: { x: 0, y: 9.5, z: -20.6 },
   checkpoints: [
     { x: 0, y: 0, z: 10 },
+    { x: 3.6, y: 0, z: 2.6 },
     { x: 0, y: 0, z: 1.6 },
-    { x: 0, y: 0, z: -6 },
+    { x: 0, y: 0, z: 0.2 },
+    { x: 0, y: 0, z: -6.5 },
     { x: 0, y: 4.5, z: -13 },
     { x: 0, y: 4.5, z: -16.6 },
   ],
