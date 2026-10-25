@@ -13,7 +13,7 @@ export interface ExplorerPose {
   splashing: boolean;
 }
 
-type ClipKey = 'idle' | 'run' | 'jump' | 'aim' | 'celebrate';
+type ClipKey = 'idle' | 'run' | 'jump' | 'aim' | 'aimL' | 'celebrate';
 
 /** The hero. Uses the rigged Tripo GLB when present, a procedural stand-in otherwise. */
 export class Explorer {
@@ -191,9 +191,20 @@ export class Explorer {
                   : n.includes('cheer') || n.includes('celebrat') || n.includes('victory') || n.includes('dance')
                     ? 'celebrate'
                     : null;
-          if (!key || this.actions.has(key)) continue;
-          // Tripo's jump clip is a loop of five hops: keep the first one
-          const use = key === 'jump' && clip.duration > 1.2 ? THREE.AnimationUtils.subclip(clip, 'jump1', 0, Math.round((clip.duration / 5) * 30), 30) : clip;
+          if (!key) continue;
+          // cast_a_spell raises the LEFT arm during its first 2 s: that is the cold glove's pose
+          if (n.includes('cast') && !this.actions.has('aimL')) {
+            this.actions.set('aimL', this.mixer.clipAction(THREE.AnimationUtils.subclip(clip, 'aimL', 0, 60, 30)));
+            if (this.actions.has('aim') || gltf.animations.some((a) => a.name.toLowerCase() === 'aim')) continue;
+          }
+          if (this.actions.has(key)) continue;
+          // Tripo's jump clip is a loop of five hops: keep the first one; the aim clip: skip its slow wind-up
+          const use =
+            key === 'jump' && clip.duration > 1.2
+              ? THREE.AnimationUtils.subclip(clip, 'jump1', 0, Math.round((clip.duration / 5) * 30), 30)
+              : key === 'aim' && n === 'aim' && clip.duration > 3
+                ? THREE.AnimationUtils.subclip(clip, 'aimR', 30, Math.round(clip.duration * 30), 30)
+                : clip;
           this.actions.set(key, this.mixer.clipAction(use));
         }
         if (!this.actions.has('idle') && gltf.animations[0]) this.actions.set('idle', this.mixer.clipAction(gltf.animations[0]));
@@ -228,7 +239,7 @@ export class Explorer {
     if (!a || this.current === key) return;
     const prev = this.current ? this.actions.get(this.current) : null;
     a.reset();
-    if (key === 'jump') {
+    if (key === 'jump' || key === 'aim' || key === 'aimL') {
       a.setLoop(THREE.LoopOnce, 1);
       a.clampWhenFinished = true;
     }
@@ -252,8 +263,10 @@ export class Explorer {
         ? 'celebrate'
         : !s.onGround && !s.gliding
           ? 'jump'
-          : gl && this.actions.has('aim')
-            ? 'aim'
+          : gl === 'cold' && this.actions.has('aimL')
+            ? 'aimL'
+            : gl && this.actions.has('aim')
+              ? 'aim'
             : s.speed > 0.6
               ? 'run'
               : 'idle';
@@ -264,7 +277,7 @@ export class Explorer {
       this.packGlow.emissiveIntensity = 1.5 + Math.sin(this.t * 3) * 0.4 + (gl === 'cold' ? 1.5 : 0);
       if (this.packObj) this.packObj.position.y = 0.86 + (s.speed > 0.6 && s.onGround && !reduced ? Math.abs(Math.sin(this.t * 10)) * 0.025 : 0);
       // when there is no aim clip, raise the aiming arm procedurally
-      if (gl && !this.actions.has('aim')) {
+      if (gl && !this.actions.has(gl === 'cold' ? 'aimL' : 'aim')) {
         const arm = gl === 'heat' ? this.boneArmR : this.boneArmL;
         if (arm) arm.rotation.x -= 1.1;
       }
