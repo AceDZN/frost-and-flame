@@ -143,7 +143,7 @@ const level2: LevelDef = {
     { id: 'tank', mat: 'water', mass: 0, T: 20 },
     ...sinks,
   ],
-  links: [{ a: 'plate', b: 'balloon', G: 900 }],
+  links: [{ a: 'plate', b: 'balloon', G: 3000 }],
   ambient: [{ body: 'tank', G: 3 }],
   drains: [
     { from: 'basin', to: 'balloon', phase: 'gas', rate: Infinity },

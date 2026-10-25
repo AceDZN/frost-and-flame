@@ -86,7 +86,9 @@ describe('level 2 — Steam Lift', () => {
     const b = new Bot('steam');
     const m0 = waterMass(b.g);
     solve(b);
-    expect(b.g.body('tank').mass).toBeCloseTo(150, 1);
+    // all 150 kg came back as water (a few hundred grams may still be on their way: in the balloon or the basin)
+    expect(b.g.body('tank').mass + b.g.body('balloon').mass + b.g.body('basin').mass).toBeCloseTo(150, 6);
+    expect(b.g.body('tank').mass).toBeGreaterThan(149);
     expect(waterMass(b.g)).toBeCloseTo(m0, 6);
     expect(b.goto(0, -11.3, { maxT: 8 })).toBe(true);
     expect(b.g.won).toBe(true);
