@@ -13,7 +13,8 @@
 
 - **Independent science review** (`docs/SCIENCE_REVIEW.md`): model and budgets confirmed; 2 bypasses (jumpable creek, way around the L6 glass) and 24 smaller findings — all fixed or accepted, with tests (resolution table in the review).
 - **Fresh-eyes playtest**: finished all 6 levels; top confusions (camera inside objects, unclear targeting, text pile-up, missing feedback, wording) fixed — see `PLAYTEST.md`.
-- Final real-key run in the browser: all six levels won, zero console errors. 50 tests pass.
+- Final real-key run in the browser: all six levels won, zero console errors.
+- **3D polish after the user's play:** removed a floating backpack; lift tanks beside their platforms; colliders for every solid prop (`src/game/props.ts`); an in-browser mesh audit (`scripts/audit.mjs`) swept all levels for floating and walk-through meshes and the hits were fixed (icicles, lock posts, rod stands, ground hose, pistons out of the doorway, no jumping into basins). 51 tests pass.
 
 ## Open / next
 
