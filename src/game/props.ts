@@ -28,6 +28,12 @@ export function spawnPosts(def: LevelDef) {
   return [-1, 1].map((sx) => ({ x: def.spawn.x + sx * 2.6, y: def.spawn.y, z: def.spawn.z + 1.2 }));
 }
 
+/** The far piston of a plunger pipe stands beside the gate, out of the doorway. */
+export function pistonPos(e: PlungerDef) {
+  const end = e.pipe[e.pipe.length - 1];
+  return { x: end.x, z: end.z - 0.35 };
+}
+
 /** The pump body beside a plunger. */
 export function pumpBox(e: PlungerDef): Box {
   return { x: e.box.x + (e.box.x < 0 ? -1.1 : 1.1), y: 0, z: e.box.z - 0.4, w: 0.65, h: 0.75, d: 1.5 };
@@ -35,7 +41,7 @@ export function pumpBox(e: PlungerDef): Box {
 
 /** The sun mirror's stand. */
 export function mirrorBox(e: MirrorDef): Box {
-  return { x: e.pos.x, y: 0, z: e.pos.z, w: 0.9, h: 1.8, d: 0.9 };
+  return { x: e.pos.x, y: 0, z: e.pos.z, w: 1.6, h: 1.8, d: 1.3 };
 }
 
 /** Small boxes along the part of a rod a player could walk into. */
@@ -67,10 +73,18 @@ export function propBoxes(def: LevelDef): Box[] {
     }
     if (e.kind === 'plunger') {
       out.push(pumpBox(e));
+      const pp = pistonPos(e);
+      out.push({ x: pp.x, y: 0, z: pp.z, w: 0.36, h: 1.2, d: 0.36 });
       out.push({ x: e.bulb.x, y: 0, z: e.bulb.z, w: 0.62, h: e.bulb.y + 0.3, d: 0.62 });
     }
     if (e.kind === 'mirror') out.push(mirrorBox(e));
-    if (e.kind === 'rod') out.push(...rodBoxes(e, e.from.y - 1.1));
+    // basins and tanks: you can't climb into the water (an invisible lid above the rim)
+    if (e.kind === 'pool' && e.levelMode === 'volume') out.push({ x: e.area.x, y: e.floorY, z: e.area.z, w: e.area.w, h: 1.9, d: e.area.d });
+    if (e.kind === 'rod') {
+      out.push(...rodBoxes(e, e.from.y - 1.1));
+      // the brass stand holding the rod's near end
+      out.push({ x: e.from.x, y: e.from.y - 1.1, z: e.from.z, w: 0.3, h: 1.0, d: 0.3 });
+    }
   }
   const lh = exitLighthouse(def);
   out.push({ x: lh.x, y: lh.y, z: lh.z, w: 0.9, h: 2.3, d: 0.9 });

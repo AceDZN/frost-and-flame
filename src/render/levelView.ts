@@ -6,7 +6,7 @@ import type { World } from './world';
 import { Particles } from './vfx';
 import { glowSprite, iceCrackTexture, iceTexture, labelTexture, puffSprite, waterNormalTexture } from './textures';
 import type { Models } from './models';
-import { exitLighthouse, liftTank, liftTube, spawnPosts } from '../game/props';
+import { exitLighthouse, liftTank, liftTube, pistonPos, spawnPosts } from '../game/props';
 
 const tmp = new THREE.Vector3();
 const tmp2 = new THREE.Vector3();
@@ -119,6 +119,8 @@ export class LevelView {
       g.position.set(s.x, s.y + s.h / 2, s.z);
       g.renderOrder = 3;
       this.root.add(g);
+      // the camera rises over glass walls rather than looking at the explorer through the frame bars
+      this.occluders.push(g);
       const frame = new THREE.Group();
       const bar = (w: number, h: number, x: number, y: number) => {
         const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, s.d + 0.06), M.brass);
@@ -199,9 +201,10 @@ export class LevelView {
         const icicles = new THREE.Group();
         if (e.tint === 'clear' && e.box.h > 1.5) {
           for (let i = 0; i < 7; i++) {
-            const c = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.35 + Math.random() * 0.3, 6), mat);
+            const len = 0.35 + Math.random() * 0.3;
+            const c = new THREE.Mesh(new THREE.ConeGeometry(0.06, len, 6), mat);
             c.rotation.x = Math.PI;
-            c.position.set(-e.box.w / 2 + 0.15 + (i / 6) * (e.box.w - 0.3), 0, -e.box.d / 2 - 0.02);
+            c.position.set(-e.box.w / 2 + 0.15 + (i / 6) * (e.box.w - 0.3), -len / 2, -e.box.d / 2 - 0.02);
             icicles.add(c);
           }
           this.root.add(icicles);
@@ -237,7 +240,7 @@ export class LevelView {
           const h = Math.max(0.02, e.box.h * f);
           mesh.scale.set(1 - (1 - f) * 0.15, h, 1 - (1 - f) * 0.25);
           mesh.position.set(e.box.x, e.box.y + h / 2, e.box.z);
-          icicles.position.set(e.box.x, e.box.y + h - 0.05, e.box.z);
+          icicles.position.set(e.box.x, e.box.y + h, e.box.z);
           icicles.visible = f > 0.3;
           const active = st.changing !== null;
           mat.emissiveIntensity = active ? 0.9 + Math.sin(t * 20) * 0.3 : 0.25;
@@ -636,7 +639,8 @@ export class LevelView {
     const basin = this.game.def.drains?.find((d) => d.to === e.body && d.phase === 'gas');
     const basinEnt = basin ? this.game.def.entities.find((x) => x.kind === 'pool' && x.body === basin.from) : null;
     const hose = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1, 8), M.brass);
-    this.root.add(hose);
+    const hoseUp = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1, 8), M.brass);
+    this.root.add(hose, hoseUp);
     // Tripo balloon split in two with clipping planes: its basket is the ride (fixed size),
     // its envelope swells with the gas inside (radius from the real steam volume).
     const basketModel = this.models.get('balloon');
@@ -700,7 +704,10 @@ export class LevelView {
         } else stretch(ropes[i], tmp.set(e.x + (sx * e.platform.w) / 2.2, top + 0.7, e.z + (sz * e.platform.d) / 2.2), new THREE.Vector3(e.x + sx * r * 0.6, cy - r * 0.75, e.z + sz * r * 0.6));
       });
       if (basinEnt && basinEnt.kind === 'pool') {
-        stretch(hose, tmp.set(basinEnt.area.x, basinEnt.floorY + 0.5, basinEnt.area.z), new THREE.Vector3(e.x - e.platform.w / 2.4, top + 0.3, e.z));
+        // a flexible hose lies on the ground from the basin and rises to the basket's underside
+        const foot = new THREE.Vector3(e.x - e.platform.w / 2 - 0.15, e.baseY - 0.28, e.z);
+        stretch(hose, tmp.set(basinEnt.area.x + basinEnt.area.w / 2 + 0.2, e.baseY - 0.28, basinEnt.area.z), foot);
+        stretch(hoseUp, foot, new THREE.Vector3(foot.x, top - 0.1, foot.z));
       }
       anchor.position.set(e.x, cy - r - 0.1, e.z);
     });
@@ -726,6 +733,14 @@ export class LevelView {
     const cap = new THREE.Mesh(new THREE.SphereGeometry(e.radius * 2.2, 14, 10), M.brass);
     cap.position.copy(from);
     this.root.add(cap);
+    // a brass stand holds the near end; the far end rests on the lock behind the glass
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.12, 1, 10), M.brass);
+    stand.position.set(from.x, from.y - 0.55, from.z);
+    stand.scale.y = 1.1;
+    stand.castShadow = true;
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.08, 16), M.brass);
+    foot.position.set(from.x, from.y - 1.06, from.z);
+    this.root.add(stand, foot);
     const plate = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(e.mat === 'copper' ? 'נחושת' : e.mat === 'wood' ? 'עץ' : 'ברזל'), depthTest: true }));
     plate.scale.set(0.8, 0.4, 1);
     plate.position.copy(from).add(new THREE.Vector3(0, -0.45, 0.1));
@@ -858,7 +873,6 @@ export class LevelView {
     this.root.add(piston);
     const anchor = this.anchorObj(e.id);
     anchor.position.set(e.bulb.x, e.bulb.y + 0.45, e.bulb.z);
-    const end = e.pipe[e.pipe.length - 1];
     this.updaters.push((game, _dt, t) => {
       const d = game.plungerDepth.get(e.id) ?? 0;
       const h = e.box.h - d;
@@ -875,7 +889,8 @@ export class LevelView {
       const push = game.plungerPush(e.id);
       const open = gate ? game.gateOpen.get(gate.id) ?? 0 : 0;
       piston.scale.y = 0.4 + Math.max(push, open) * 2.2;
-      piston.position.set(end.x, 0.2 + piston.scale.y / 2, end.z - 0.4);
+      const pp = pistonPos(e);
+      piston.position.set(pp.x, piston.scale.y / 2, pp.z);
     });
   }
 
@@ -918,7 +933,7 @@ export class LevelView {
     const side = tp.side;
     // a brass pipe carries the tank's temperature to the thermometer column
     const feed = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1, 8), M.brass);
-    stretch(feed, new THREE.Vector3(tp.x, e.baseY + 0.25, tp.z), new THREE.Vector3(e.x, e.baseY + 0.25, e.z));
+    stretch(feed, new THREE.Vector3(tp.x, e.baseY + 0.07, tp.z), new THREE.Vector3(e.x, e.baseY + 0.07, e.z));
     this.root.add(feed);
     const tank = new THREE.Mesh(new THREE.BoxGeometry(side, side, side), tankMat);
     tank.castShadow = true;

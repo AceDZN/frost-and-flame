@@ -454,6 +454,10 @@ function updateCamera(dt: number) {
     shake = Math.max(0, shake - dt * 1.6);
   }
   world.camera.lookAt(camLook);
+  if (camOverride) {
+    world.camera.position.copy(camOverride.p);
+    world.camera.lookAt(camOverride.l);
+  }
   world.updateShadow(tmp.set(p.x, p.y, p.z));
 }
 
@@ -652,7 +656,73 @@ window.advanceTime = (ms: number) => {
   for (let i = 0; i < n; i++) stepGame();
   render(n * STEP);
 };
-window.__frost = { start: (i: number) => startLevel(i), get game() { return game; }, explorer };
+// debug: a free camera and a mesh audit (used by scripts/audit.mjs; harmless in play)
+let camOverride: { p: THREE.Vector3; l: THREE.Vector3 } | null = null;
+function audit() {
+  if (!game || !view) return [];
+  const boxes = game.colliders.map((c) => c.box);
+  const out: { kind: string; geo: string; min: number[]; max: number[]; note: string }[] = [];
+  const bb = new THREE.Box3();
+  view.root.updateMatrixWorld(true);
+  // every visible solid mesh's box, so "floating" can ignore things resting on other things
+  const meshBoxes: THREE.Box3[] = [];
+  view.root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh && m.visible) meshBoxes.push(new THREE.Box3().setFromObject(m));
+  });
+  view.root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || !m.visible) return;
+    let vis = true;
+    for (let q: THREE.Object3D | null = m; q; q = q.parent) if (!q.visible) vis = false;
+    if (!vis) return;
+    const mat = m.material as THREE.MeshBasicMaterial;
+    if (mat.blending === THREE.AdditiveBlending || (mat.transparent && mat.opacity < 0.3)) return;
+    bb.setFromObject(m);
+    const sz = bb.getSize(new THREE.Vector3());
+    if (Math.max(sz.x, sz.y, sz.z) < 0.15) return;
+    const geo = m.geometry?.type ?? '?';
+    // does it sit in space a player could walk through without a collider covering it?
+    for (const g of boxes) {
+      const top = g.maxY;
+      const ox = Math.min(bb.max.x, g.maxX) - Math.max(bb.min.x, g.minX);
+      const oz = Math.min(bb.max.z, g.maxZ) - Math.max(bb.min.z, g.minZ);
+      const oy = Math.min(bb.max.y, top + 1.4) - Math.max(bb.min.y, top + 0.05);
+      if (ox > 0.2 && oz > 0.2 && oy > 0.2) {
+        // covered by a collider?
+        const covered = boxes.some((c) => {
+          const cx = Math.min(bb.max.x, c.maxX) - Math.max(bb.min.x, c.minX);
+          const cz = Math.min(bb.max.z, c.maxZ) - Math.max(bb.min.z, c.minZ);
+          const cy = Math.min(bb.max.y, c.maxY) - Math.max(bb.min.y, c.minY);
+          return cx > 0 && cz > 0 && cy > 0 && (cx * cz) / (Math.max(0.01, sz.x) * Math.max(0.01, sz.z)) > 0.5;
+        });
+        if (!covered) out.push({ kind: 'walk-through', geo, min: bb.min.toArray().map((v) => +v.toFixed(2)), max: bb.max.toArray().map((v) => +v.toFixed(2)), note: '' });
+        break;
+      }
+    }
+    // floating: nothing (collider or another mesh's ground) directly under its bottom
+    const under = boxes.filter((c) => bb.max.x > c.minX && bb.min.x < c.maxX && bb.max.z > c.minZ && bb.min.z < c.maxZ && c.maxY <= bb.min.y + 0.05);
+    const ground = under.length ? Math.max(...under.map((c) => c.maxY)) : -Infinity;
+    const gap = bb.min.y - ground;
+    const resting = meshBoxes.some(
+      (o) => o !== undefined && !o.equals(bb) && o.max.y >= bb.min.y - 0.08 && o.min.y < bb.min.y + 0.01 && o.max.x > bb.min.x && o.min.x < bb.max.x && o.max.z > bb.min.z && o.min.z < bb.max.z,
+    );
+    if (!resting && gap > 0.15 && gap < 50 && sz.y < 6) out.push({ kind: 'floating', geo, min: bb.min.toArray().map((v) => +v.toFixed(2)), max: bb.max.toArray().map((v) => +v.toFixed(2)), note: `gap ${gap.toFixed(2)}` });
+  });
+  return out;
+}
+window.__frost = {
+  start: (i: number) => startLevel(i),
+  get game() {
+    return game;
+  },
+  explorer,
+  audit,
+  cam: (px: number, py: number, pz: number, lx: number, ly: number, lz: number) => {
+    camOverride = { p: new THREE.Vector3(px, py, pz), l: new THREE.Vector3(lx, ly, lz) };
+  },
+  camOff: () => (camOverride = null),
+};
 
 function round3(v: { x: number; y: number; z: number }) {
   return { x: +v.x.toFixed(2), y: +v.y.toFixed(2), z: +v.z.toFixed(2) };

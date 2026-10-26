@@ -251,8 +251,10 @@ const level3: LevelDef = {
     ...glassWall(0, 1.6),
     ...glassWall(-10, 1.6),
     S(0, 0, -19, 9, 5.2, 4, 'basalt'),
-    S(0, 2.2, -0.75, 0.6, 0.38, 0.5, 'brass', true),
-    S(0.45, 2.2, -10.75, 1.2, 0.2, 0.6, 'brass', true),
+    S(0, 0, -0.75, 0.16, 2.6, 0.16, 'brass', true),
+    S(0, 2.45, -0.75, 0.5, 0.15, 0.45, 'brass', true),
+    S(0.2, 0, -10.75, 0.16, 2.4, 0.16, 'brass', true),
+    S(0.25, 2.3, -10.75, 1.0, 0.1, 0.55, 'brass', true),
   ],
   bodies: [
     { id: 'lock', mat: 'water', mass: iceMass(L3lock), T: -8 },
@@ -357,8 +359,8 @@ const level4: LevelDef = {
   drains: [{ from: 'dry', to: 'co2air', phase: 'gas', rate: Infinity }],
   entities: [
     { kind: 'ice', id: 'dry', labelHe: 'קרח יבש', body: 'dry', box: L4dry, drainTo: 'co2air', targetable: true, tint: 'dry' },
-    { kind: 'plunger', id: 'plA', labelHe: 'בוכנה — צינור אוויר', body: 'airpipe', box: { x: -2, y: 0, z: -3.6, w: 1.3, h: 0.4, d: 1.3 }, bulb: { x: -2, y: 1.1, z: -5.7 }, pipe: [{ x: -2, y: 0.2, z: -4.3 }, { x: -2, y: 0.2, z: -8.2 }, { x: -0.6, y: 0.2, z: -9.2 }], targetable: true },
-    { kind: 'plunger', id: 'plB', labelHe: 'בוכנה — צינור מים', body: 'waterpipe', box: { x: 2, y: 0, z: -3.6, w: 1.3, h: 0.4, d: 1.3 }, bulb: { x: 2, y: 1.1, z: -5.7 }, pipe: [{ x: 2, y: 0.2, z: -4.3 }, { x: 2, y: 0.2, z: -8.2 }, { x: 0.6, y: 0.2, z: -9.2 }], targetable: true },
+    { kind: 'plunger', id: 'plA', labelHe: 'בוכנה — צינור אוויר', body: 'airpipe', box: { x: -2, y: 0, z: -3.6, w: 1.3, h: 0.4, d: 1.3 }, bulb: { x: -2, y: 1.1, z: -5.7 }, pipe: [{ x: -2, y: 0.2, z: -4.3 }, { x: -2, y: 0.2, z: -8.4 }, { x: -1.4, y: 0.2, z: -9.3 }], targetable: true },
+    { kind: 'plunger', id: 'plB', labelHe: 'בוכנה — צינור מים', body: 'waterpipe', box: { x: 2, y: 0, z: -3.6, w: 1.3, h: 0.4, d: 1.3 }, bulb: { x: 2, y: 1.1, z: -5.7 }, pipe: [{ x: 2, y: 0.2, z: -4.3 }, { x: 2, y: 0.2, z: -8.4 }, { x: 1.4, y: 0.2, z: -9.3 }], targetable: true },
     {
       kind: 'gate',
       id: 'gate',
@@ -490,7 +492,8 @@ const level6: LevelDef = {
     S(0, 4.5, -20.5, 12, 5.0, 3, 'basalt'),
     { ...S(0, 9.5, -21.8, 12, 3, 0.4), visualH: 0.7 },
     { ...S(0, 4.5, -22.8, 12, 3, 0.4), visualH: 0.7 },
-    S(0, 6.6, -15.75, 0.6, 0.5, 0.5, 'brass', true),
+    S(0, 4.5, -15.75, 0.16, 2.6, 0.16, 'brass', true),
+    S(0, 6.95, -15.75, 0.5, 0.15, 0.45, 'brass', true),
   ],
   bodies: [
     { id: 'glacier', mat: 'water', mass: iceMass(L6glacier), T: -12 },
