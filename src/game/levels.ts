@@ -284,7 +284,7 @@ const level3: LevelDef = {
       kind: 'mirror',
       id: 'mirror',
       labelHe: 'מראת שמש',
-      pos: { x: -3.4, y: 2.0, z: -5.0 },
+      pos: { x: -3.4, y: 1.25, z: -5.0 },
       sun: { x: -4.6, y: 9, z: -1.5 },
       power: 12_000,
       aims: [
@@ -344,8 +344,8 @@ const level4: LevelDef = {
     S(2.8, 0, -10, 3.4, 4, 0.4),
     S(0, 2.8, -10, 2.2, 1.2, 0.4),
     S(0, 0, -17.3, 9, 2.4, 0.6),
-    S(-2, 0, -5.2, 0.35, 0.8, 0.35, 'brass'),
-    S(2, 0, -5.2, 0.35, 0.8, 0.35, 'brass'),
+    S(-2, 0, -5.7, 0.35, 0.8, 0.35, 'brass'),
+    S(2, 0, -5.7, 0.35, 0.8, 0.35, 'brass'),
   ],
   bodies: [
     { id: 'dry', mat: 'dryIce', mass: Math.round(L4dry.w * L4dry.h * L4dry.d * 1560), T: -78.5, phase: 'solid', minT: -100 },
@@ -357,8 +357,8 @@ const level4: LevelDef = {
   drains: [{ from: 'dry', to: 'co2air', phase: 'gas', rate: Infinity }],
   entities: [
     { kind: 'ice', id: 'dry', labelHe: 'קרח יבש', body: 'dry', box: L4dry, drainTo: 'co2air', targetable: true, tint: 'dry' },
-    { kind: 'plunger', id: 'plA', labelHe: 'בוכנה — צינור אוויר', body: 'airpipe', box: { x: -2, y: 0, z: -3.6, w: 1.3, h: 0.4, d: 1.3 }, bulb: { x: -2, y: 1.1, z: -5.2 }, pipe: [{ x: -2, y: 0.2, z: -4.3 }, { x: -2, y: 0.2, z: -8.2 }, { x: -0.6, y: 0.2, z: -9.2 }], targetable: true },
-    { kind: 'plunger', id: 'plB', labelHe: 'בוכנה — צינור מים', body: 'waterpipe', box: { x: 2, y: 0, z: -3.6, w: 1.3, h: 0.4, d: 1.3 }, bulb: { x: 2, y: 1.1, z: -5.2 }, pipe: [{ x: 2, y: 0.2, z: -4.3 }, { x: 2, y: 0.2, z: -8.2 }, { x: 0.6, y: 0.2, z: -9.2 }], targetable: true },
+    { kind: 'plunger', id: 'plA', labelHe: 'בוכנה — צינור אוויר', body: 'airpipe', box: { x: -2, y: 0, z: -3.6, w: 1.3, h: 0.4, d: 1.3 }, bulb: { x: -2, y: 1.1, z: -5.7 }, pipe: [{ x: -2, y: 0.2, z: -4.3 }, { x: -2, y: 0.2, z: -8.2 }, { x: -0.6, y: 0.2, z: -9.2 }], targetable: true },
+    { kind: 'plunger', id: 'plB', labelHe: 'בוכנה — צינור מים', body: 'waterpipe', box: { x: 2, y: 0, z: -3.6, w: 1.3, h: 0.4, d: 1.3 }, bulb: { x: 2, y: 1.1, z: -5.7 }, pipe: [{ x: 2, y: 0.2, z: -4.3 }, { x: 2, y: 0.2, z: -8.2 }, { x: 0.6, y: 0.2, z: -9.2 }], targetable: true },
     {
       kind: 'gate',
       id: 'gate',

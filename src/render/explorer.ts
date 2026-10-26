@@ -39,7 +39,6 @@ export class Explorer {
   private boneArmR: THREE.Object3D | null = null;
   private boneArmL: THREE.Object3D | null = null;
   modelInfo = 'procedural';
-  private packObj: THREE.Object3D | null = null;
 
   constructor() {
     this.buildProcedural();
@@ -157,19 +156,6 @@ export class Explorer {
       });
       this.group.remove(this.body);
       this.group.add(root);
-      // the heat battery on the explorer's back, with its glowing gauge window (as in the mockups)
-      const pack = new THREE.Group();
-      const brass = new THREE.MeshStandardMaterial({ color: 0xd9a548, metalness: 0.9, roughness: 0.3 });
-      const packBox = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.36, 0.16), brass);
-      const win = new THREE.Mesh(new THREE.CircleGeometry(0.085, 20), this.packGlow);
-      win.position.z = 0.081;
-      const rimM = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.015, 6, 20), brass);
-      rimM.position.z = 0.082;
-      pack.add(packBox, win, rimM);
-      pack.position.set(0, 0.86, 0.2);
-      pack.traverse((o) => ((o as THREE.Mesh).castShadow = true));
-      this.group.add(pack);
-      this.packObj = pack;
       if (this.boneR) this.boneR.add(this.handR);
       if (this.boneL) this.boneL.add(this.handL);
       // glow sprites are in bone space; undo the bone scale so they stay ~0.35 m
@@ -275,7 +261,6 @@ export class Explorer {
       if (run) run.timeScale = Math.max(0.7, s.speed / 4.2);
       this.mixer.update(dt);
       this.packGlow.emissiveIntensity = 1.5 + Math.sin(this.t * 3) * 0.4 + (gl === 'cold' ? 1.5 : 0);
-      if (this.packObj) this.packObj.position.y = 0.86 + (s.speed > 0.6 && s.onGround && !reduced ? Math.abs(Math.sin(this.t * 10)) * 0.025 : 0);
       // when there is no aim clip, raise the aiming arm procedurally
       if (gl && !this.actions.has(gl === 'cold' ? 'aimL' : 'aim')) {
         const arm = gl === 'heat' ? this.boneArmR : this.boneArmL;

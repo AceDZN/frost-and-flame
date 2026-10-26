@@ -116,7 +116,7 @@ Textures re-encoded to WebP (quality 85) with `npx @gltf-transform/cli@4 webp in
 How each model is used in gameplay:
 - **explorer** — the player character (AnimationMixer: idle, run, the first hop of the jump loop, aim while a glove is held, cheer on the win). A procedural brass battery backpack and glove glows are attached in code.
 - **balloon** — split with two clipping planes: the basket is the steam-lift ride (fixed size), the envelope swells with the gas mass (radius from the real 100 °C steam volume, visually capped).
-- **sun-mirror** — the level 3 heliostat; it turns to bisect the sunbeam and the chosen target.
-- **plunger** — pump bodies beside the two level 4 plungers (the interactive plunger disc, pipes and glass bulb are procedural).
-- **thermo-lift** — brass thermometer towers beside the level 5 lifts (the live liquid column and platform are procedural).
+- **sun-mirror** — the level 3 heliostat, standing upright on its stone base; it turns about its stand toward the chosen target (solid: you can't walk through it).
+- **plunger** — solid pump bodies beside the two level 4 plungers (the interactive plunger disc, pipes and glass bulb are procedural).
+- **thermo-lift** — brass thermometer towers as landmarks just outside the walkable area beside the level 5/6 lifts (the live lift — tank beside the platform, glass tube, liquid column — is procedural and solid).
 - **observatory** — landmark in every level; the goal building in level 6.

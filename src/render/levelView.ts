@@ -6,6 +6,7 @@ import type { World } from './world';
 import { Particles } from './vfx';
 import { glowSprite, iceCrackTexture, iceTexture, labelTexture, puffSprite, waterNormalTexture } from './textures';
 import type { Models } from './models';
+import { exitLighthouse, liftTank, liftTube, spawnPosts } from '../game/props';
 
 const tmp = new THREE.Vector3();
 const tmp2 = new THREE.Vector3();
@@ -775,9 +776,10 @@ export class LevelView {
       glass.visible = false;
       ring.visible = false;
       stand.visible = false;
+      // the stone base stands on the ground; the mirror turns about its stand
       tm.scale.setScalar(1.8);
-      tm.position.set(0, -1.15, 0);
-      disc.add(tm);
+      tm.position.set(e.pos.x, 0, e.pos.z);
+      this.root.add(tm);
     }
     const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd38a, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false });
     const sunBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 1, 16, 1, true), beamMat);
@@ -799,6 +801,7 @@ export class LevelView {
       const n = tmp.copy(sunV).sub(P).normalize().add(tmp2.copy(target).sub(P).normalize()).normalize();
       look.copy(P).add(n);
       disc.lookAt(look);
+      if (tm) tm.rotation.y = Math.atan2(n.x, n.z);
       outBeam.visible = !!aim;
       spot.visible = !!aim;
       if (aim) {
@@ -879,26 +882,27 @@ export class LevelView {
   private addLift(e: Extract<EntityDef, { kind: 'lift' }>) {
     const M = this.world.mats;
     const tubeH = e.height + 0.6;
+    const tb = liftTube(e);
     const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, tubeH, 16, 1, true), this.world.mats.glass);
-    tube.position.set(e.x, e.baseY + 0.35 + tubeH / 2, e.z + 0.95);
+    tube.position.set(tb.x, e.baseY + 0.35 + tubeH / 2, tb.z);
     tube.renderOrder = 3;
     this.root.add(tube);
     const liquidMat = new THREE.MeshStandardMaterial({ color: 0xff2a1a, emissive: 0xc01000, emissiveIntensity: 0.9, roughness: 0.3 });
     const liquid = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1, 12), liquidMat);
     this.root.add(liquid);
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.28, 18, 14), liquidMat);
-    bulb.position.set(e.x, e.baseY + 0.35, e.z + 0.95);
+    bulb.position.set(tb.x, e.baseY + 0.35, tb.z);
     this.root.add(bulb);
     // tick marks every 20 °C with labels
     for (let T = Math.ceil(e.Tmin / 20) * 20; T <= e.Tmax; T += 20) {
       const y = e.baseY + 0.35 + (e.height * (T - e.Tmin)) / (e.Tmax - e.Tmin);
       const tick = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.05), M.brass);
-      tick.position.set(e.x, y, e.z + 0.95);
+      tick.position.set(tb.x, y, tb.z);
       this.root.add(tick);
       if (T % 40 === 0 || T === 0) {
         const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(`${T}°`) }));
         s.scale.set(0.6, 0.3, 1);
-        s.position.set(e.x + 0.6, y, e.z + 0.95);
+        s.position.set(tb.x + (e.x < 0 ? 0.55 : -0.55), y, tb.z + 0.15);
         this.root.add(s);
       }
     }
@@ -910,8 +914,12 @@ export class LevelView {
           ? this.iceMaterial('clear')
           : new THREE.MeshStandardMaterial({ color: 0x2a86c0, roughness: 0.15, transparent: true, opacity: 0.85 });
     const b = this.game.body(e.body);
-    const vol = e.tank === 'iron' ? b.mass / 7870 : b.mass / 1000;
-    const side = Math.cbrt(vol);
+    const tp = liftTank(e, this.game.def.bodies.find((x) => x.id === e.body)!.mass);
+    const side = tp.side;
+    // a brass pipe carries the tank's temperature to the thermometer column
+    const feed = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1, 8), M.brass);
+    stretch(feed, new THREE.Vector3(tp.x, e.baseY + 0.25, tp.z), new THREE.Vector3(e.x, e.baseY + 0.25, e.z));
+    this.root.add(feed);
     const tank = new THREE.Mesh(new THREE.BoxGeometry(side, side, side), tankMat);
     tank.castShadow = true;
     const cage = new THREE.Mesh(new THREE.BoxGeometry(side + 0.12, side + 0.06, side + 0.12), new THREE.MeshStandardMaterial({ color: 0xd9a548, metalness: 0.9, roughness: 0.3, wireframe: true }));
@@ -928,36 +936,29 @@ export class LevelView {
     const name = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture(`${Math.round(b.mass)} ק״ג`) }));
     name.scale.set(0.9, 0.45, 1);
     this.root.add(name);
-    const tower = this.models.get('thermo-lift');
-    if (tower) {
-      tower.scale.setScalar(3.4);
-      tower.position.set(e.x + (e.x < 0 ? -1.5 : 1.5), e.baseY, e.z - 0.55);
-      this.root.add(tower);
-      this.occluders.push(tower);
-    }
     const anchor = this.anchorObj(e.id);
     const c = new THREE.Color();
     this.updaters.push((game) => {
       const top = game.heights.get(e.id)!;
       plat.position.set(e.x, top - 0.125, e.z);
-      stretch(column, new THREE.Vector3(e.x, e.baseY + side, e.z), new THREE.Vector3(e.x, top - 0.25, e.z));
-      stretch(liquid, new THREE.Vector3(e.x, e.baseY + 0.35, e.z + 0.95), new THREE.Vector3(e.x, top, e.z + 0.95));
+      stretch(column, new THREE.Vector3(e.x, e.baseY, e.z), new THREE.Vector3(e.x, top - 0.25, e.z));
+      stretch(liquid, new THREE.Vector3(tb.x, e.baseY + 0.35, tb.z), new THREE.Vector3(tb.x, top, tb.z));
       const body = game.body(e.body);
       const st = body.state;
       const sol = e.tank === 'ice' ? st.frac.solid : 1;
       tank.scale.set(1, Math.max(0.02, e.tank === 'ice' ? sol : 1), 1);
-      tank.position.set(e.x, e.baseY + (side * tank.scale.y) / 2, e.z);
-      cage.position.set(e.x, e.baseY + side / 2 + 0.03, e.z);
+      tank.position.set(tp.x, e.baseY + (side * tank.scale.y) / 2, tp.z);
+      cage.position.set(tp.x, e.baseY + side / 2 + 0.03, tp.z);
       meltWater.visible = e.tank === 'ice' && st.frac.liquid > 0.01;
       const hw = side * st.frac.liquid * 0.92;
       meltWater.scale.y = Math.max(0.001, hw);
-      meltWater.position.set(e.x, e.baseY + hw / 2, e.z);
+      meltWater.position.set(tp.x, e.baseY + hw / 2, tp.z);
       if (e.tank === 'iron') {
         (tankMat as THREE.MeshStandardMaterial).emissive.copy(glowFor(st.T, c));
         (tankMat as THREE.MeshStandardMaterial).emissiveIntensity = 2;
       }
-      name.position.set(e.x, e.baseY + side + 0.35, e.z + side / 2 + 0.2);
-      anchor.position.set(e.x, e.baseY + side + 0.15, e.z);
+      name.position.set(tp.x, e.baseY + side + 0.35, tp.z + side / 2 + 0.2);
+      anchor.position.set(tp.x, e.baseY + side + 0.15, tp.z);
       // the column glows while stuck on a plateau
       liquidMat.emissiveIntensity = st.changing ? 0.6 + 0.5 * Math.abs(Math.sin(performance.now() / 180)) : 0.9;
     });
@@ -1001,10 +1002,11 @@ export class LevelView {
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.05;
     g.add(ring);
-    g.position.set(ex.x, ex.y, ex.z - 0.6);
+    const lh = exitLighthouse(this.game.def);
+    g.position.set(lh.x, lh.y, lh.z);
     this.root.add(g);
     const light = new THREE.PointLight(0xffa050, 18, 9, 1.6);
-    light.position.set(ex.x, ex.y + 1.9, ex.z - 0.6);
+    light.position.set(lh.x, lh.y + 1.9, lh.z);
     this.root.add(light);
     this.exitLight = light;
     const anchor = this.anchorObj('exit');
@@ -1018,19 +1020,19 @@ export class LevelView {
 
   private addDecor() {
     // brass lamp posts near the spawn and warm light pools, plus the Tripo observatory in the distance
-    const sp = this.game.def.spawn;
     const M = this.world.mats;
-    for (const sx of [-1, 1]) {
+    for (const pp of spawnPosts(this.game.def)) {
       const post = new THREE.Group();
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 2.2, 8), M.brass);
       pole.position.y = 1.1;
       const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), new THREE.MeshStandardMaterial({ color: 0xffd38a, emissive: 0xffa040, emissiveIntensity: 3 }));
       lamp.position.y = 2.3;
       post.add(pole, lamp);
-      post.position.set(sp.x + sx * 2.6, sp.y, sp.z + 1.2);
+      post.position.set(pp.x, pp.y, pp.z);
+      post.traverse((o) => ((o as THREE.Mesh).castShadow = true));
       this.root.add(post);
       const pl = new THREE.PointLight(0xffa050, 6, 6, 1.8);
-      pl.position.set(sp.x + sx * 2.6, sp.y + 2.3, sp.z + 1.2);
+      pl.position.set(pp.x, pp.y + 2.3, pp.z);
       this.root.add(pl);
     }
     // the island around the playable strip: low snowy shelves, boulders and ice shards
@@ -1078,6 +1080,17 @@ export class LevelView {
     const front = new THREE.Mesh(rockGeometry(maxX - minX + 20, 4, 6, 0.4), M.basalt);
     front.position.set((minX + maxX) / 2, -4.3, maxZ + 2.5);
     this.root.add(front);
+    // Tripo brass thermometer towers stand as landmarks just outside the walkable area beside the lifts
+    for (const e of this.game.def.entities) {
+      if (e.kind !== 'lift') continue;
+      const tower = this.models.get('thermo-lift');
+      if (!tower) break;
+      const xs = this.game.def.statics.filter((st) => st.visualH !== undefined).map((st) => Math.abs(st.x) + st.w / 2);
+      const edge = xs.length ? Math.max(...xs) : 7;
+      tower.scale.setScalar(4.2);
+      tower.position.set((e.x < 0 ? -1 : 1) * (edge + 2.4), -1, e.z - 1.5);
+      this.root.add(tower);
+    }
     const obs = this.models.get('observatory');
     if (obs) {
       obs.scale.setScalar(9);

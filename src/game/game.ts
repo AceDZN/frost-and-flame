@@ -5,6 +5,7 @@ import { HeatBattery, ThermalSystem, conductance, transferMass, type Body } from
 import { MATERIALS, type Phase } from '../sim/materials';
 import { clamp, dist, distXZ, overlaps, segmentHitsAABB, toAABB, type AABB, type Box, type V3 } from './geom';
 import type { EntityDef, HintStep, LevelDef, LiftDef, BalloonDef, PoolDef, RodDef, PlungerDef } from './types';
+import { liftTank, propBoxes } from './props';
 
 export const GLOVE_POWER = 100_000; // kJ/s (100 MJ/s) at full strength
 const GLOVE_RAMP = 0.9; // seconds from 35% to full power
@@ -111,8 +112,11 @@ export class Game {
   private plungerLast = new Map<string, string>();
   private plungerReported = new Map<string, string>();
 
+  private props: Box[];
+
   constructor(def: LevelDef, retry = 0) {
     this.def = def;
+    this.props = propBoxes(def);
     this.retry = retry;
     this.battery = new HeatBattery(def.battery.start, def.battery.capacity);
     for (const b of def.bodies) this.sys.add(b);
@@ -198,8 +202,10 @@ export class Game {
         return { x: e.box.x, y: e.box.y + e.box.h, z: e.box.z };
       case 'rod':
         return { ...e.from };
-      case 'lift':
-        return { x: e.x, y: e.baseY + 0.6, z: e.z };
+      case 'lift': {
+        const t = liftTank(e, this.def.bodies.find((b) => b.id === e.body)!.mass);
+        return { x: t.x, y: e.baseY + t.side + 0.15, z: t.z };
+      }
       case 'plunger':
         return { ...e.bulb };
       case 'balloon':
@@ -374,6 +380,8 @@ export class Game {
   rebuildColliders() {
     const out: Collider[] = [];
     for (const [i, s] of this.def.statics.entries()) if (!s.ghost) out.push({ box: toAABB(s), id: `static${i}` });
+    // solid props (tanks, pumps, the mirror stand, rods, the lighthouse, lamp posts)
+    for (const [i, b] of this.props.entries()) out.push({ box: toAABB(b), id: `prop${i}` });
     for (const e of this.def.entities) {
       switch (e.kind) {
         case 'ice': {
@@ -407,6 +415,8 @@ export class Game {
           const y = this.heights.get(e.id)!;
           const r = e.platform;
           out.push({ box: toAABB({ x: e.x, y: y - 0.25, z: e.z, w: r * 2, h: 0.25, d: r * 2 }), id: e.id });
+          // the brass column under a raised platform
+          if (y - 0.25 - e.baseY > 0.3) out.push({ box: toAABB({ x: e.x, y: e.baseY, z: e.z, w: 0.42, h: y - 0.25 - e.baseY, d: 0.42 }), id: `${e.id}-column` });
           break;
         }
         case 'plate':

@@ -233,8 +233,8 @@ describe('level 4 — Squeeze', () => {
     b.wait(0.5);
     expect(b.g.plungerResult(b.g.entity<'plunger'>('plB'))).toBe('locked');
     expect(b.g.gateOpen.get('gate')!).toBeLessThan(0.05);
-    b.goto(2, -4.72, { tol: 0.06 });
-    b.face(2, -5.2);
+    b.goto(2, -4.85, { tol: 0.06 });
+    b.face(2, -5.7);
     b.hold('heat', (g) => g.body('waterpipe').state.frac.liquid > 0.99, 10);
     expect(b.goto(2, -3.6)).toBe(true);
     b.wait(1);
@@ -246,10 +246,10 @@ describe('level 4 — Squeeze', () => {
   it('freezing the water pipe again locks it', () => {
     const b = new Bot('squeeze');
     pastDryIce(b);
-    b.goto(2, -4.72, { tol: 0.06 });
-    b.face(2, -5.2);
+    b.goto(2, -4.85, { tol: 0.06 });
+    b.face(2, -5.7);
     b.hold('heat', (g) => g.body('waterpipe').state.frac.liquid > 0.99, 10);
-    b.face(2, -5.2);
+    b.face(2, -5.7);
     b.hold('cold', (g) => g.body('waterpipe').state.frac.solid > 0.9, 10);
     b.goto(2, -3.6);
     b.wait(1);
@@ -512,5 +512,37 @@ describe('science review regressions', () => {
     b.goto(0, 2.6);
     b.face(0, -4);
     expect(b.g.candidates().map((c) => c.id)).not.toContain('creek');
+  });
+});
+
+describe('solid props', () => {
+  it('you cannot walk through the pump, the lighthouse, the lift tank or a raised lift column', () => {
+    const l4 = new Bot('squeeze');
+    l4.g.player.pos = { x: 2, y: 0, z: -2 };
+    l4.step({}, 3);
+    l4.goto(3.1, -4.0, { maxT: 3 });
+    // the pump body (x 2.78–3.43, z −4.75…−3.25) stays out of the player's footprint
+    const p4 = l4.g.player.pos;
+    const inside = Math.abs(p4.x - 3.1) < 0.32 + 0.325 - 0.01 && Math.abs(p4.z + 4.0) < 0.32 + 0.75 - 0.01;
+    expect(inside && p4.y < 0.7).toBe(false); // standing on top of it is fine
+
+    const l1 = new Bot('thaw');
+    l1.g.body('door').addHeat(1e7);
+    l1.g.body('creek').addHeat(-1e7);
+    l1.step({}, 2);
+    l1.g.player.pos = { x: 0, y: 0, z: -12.0 };
+    l1.step({}, 2);
+    expect(l1.g.won).toBe(false);
+    l1.g.player.pos = { x: 0.9, y: 0, z: -8.5 };
+    l1.step({}, 2);
+    l1.goto(0, -11.5, { maxT: 3 });
+    // the lighthouse stops you, and touching it is the win
+    expect(l1.g.won).toBe(true);
+    expect(l1.g.player.pos.z).toBeGreaterThan(-10.2);
+
+    const l5 = new Bot('plateau');
+    l5.goto(3.55, -1.5, { maxT: 3 });
+    l5.goto(3.55, -4.2, { maxT: 3 });
+    expect(l5.g.player.pos.z).toBeGreaterThan(-3.4);
   });
 });
